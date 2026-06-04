@@ -4,3 +4,6 @@
 [submodule "doom/.emacs.d"]
 	path = doom/.emacs.d
 	url = https://github.com/lubasinkal/doom
+[submodule "doom/.config/doom"]
+	path = doom/.config/doom
+	url = https://github.com/lubasinkal/doom
