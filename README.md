@@ -7,9 +7,10 @@ Managed with [GNU Stow](https://www.gnu.org/software/stow/).
 Each directory in this repository represents a "package" that can be stowed into your home directory. The internal structure of each package mirrors the path in your home directory.
 
 - `bash/`: Contains `.bashrc`, `.bash_profile`, etc.
+- `doom/`: A git submodule containing `.config/doom/`.
 - `git/`: Contains `.gitconfig`.
 - `ghostty/`: Contains `.config/ghostty/`.
-- `nvim/`: Contains `.config/nvim/`.
+- `nvim/`: A git submodule containing `.config/nvim/`.
 - `starship/`: Contains `.config/starship.toml`.
 - `walker/`: Contains `.config/walker/`.
 - `wezterm/`: Contains `.wezterm.lua`.
@@ -25,7 +26,7 @@ Each directory in this repository represents a "package" that can be stowed into
    ```
 2. Move your existing config files into that directory:
    ```bash
-   mv ~/.config/tmux ~/.config/tmux ~/dotfiles/tmux/.config/
+   mv ~/.config/tmux ~/dotfiles/tmux/.config/
    ```
 3. Stow the new package:
    ```bash
@@ -41,6 +42,21 @@ Each directory in this repository represents a "package" that can be stowed into
    stow -D tmux
    ```
 2. (Optional) Delete the directory in `dotfiles` if you no longer want to manage it.
+
+## Deployment (New Machine)
+
+To set up these dotfiles on a new machine:
+
+1. Install `stow` and `git`.
+2. Clone this repository recursively (to include submodules):
+   ```bash
+   git clone --recursive <your-dotfiles-repo-url> ~/dotfiles
+   ```
+3. Stow each package:
+   ```bash
+   cd ~/dotfiles
+   stow bash doom git ghostty nvim starship walker wezterm zsh
+   ```
 
 ## Workflow Tip
 
