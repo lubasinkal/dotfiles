@@ -1,0 +1,133 @@
+/* ─── Minimalist Dark Theme ───────────────────────────────────── */
+/* Sharp, clean, and professional aesthetic                       */
+
+@define-color window_bg_color      rgba(15, 15, 20, 0.8);
+@define-color accent_bg_color      #7c5cfc;
+@define-color accent_bg_hover      rgba(124, 92, 252, 0.15);
+@define-color theme_fg_color       #e0e0e0;
+@define-color theme_fg_dim         rgba(224, 224, 224, 0.4);
+@define-color error_bg_color       #f38ba8;
+@define-color error_fg_color       #1e1e2e;
+@define-color surface_color        rgba(30, 30, 46, 0.6);
+@define-color border_color         rgba(124, 92, 252, 0.4);
+
+* {
+  all: unset;
+}
+
+/* ─── Main Window ──────────────────────────────────────────────── */
+.box-wrapper {
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  background: @window_bg_color;
+  padding: 8px;
+  border-radius: 8px; /* Less rounded */
+  border: 1.5px solid @border_color; /* Prominent window border */
+  backdrop-filter: blur(25px);
+}
+
+/* ─── Search / Input ────────────────────────────────────────────── */
+.search-container {
+  border-radius: 6px;
+}
+
+.input {
+  caret-color: @accent_bg_color;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 10px 14px;
+  color: @theme_fg_color;
+  font-size: 16px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 150ms ease;
+}
+
+.input:focus,
+.input:active {
+  border: 1px solid @accent_bg_color;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.input placeholder {
+  opacity: 0.3;
+}
+
+/* ─── List & Items ──────────────────────────────────────────────── */
+.list {
+  color: @theme_fg_color;
+}
+
+.item-box {
+  border-radius: 6px; /* Sharper corners */
+  padding: 8px 12px;
+  margin: 1px 0;
+}
+
+/* Selection State */
+child:selected .item-box,
+row:selected .item-box {
+  background: @accent_bg_hover;
+  border: 1px solid rgba(124, 92, 252, 0.2);
+}
+
+/* ─── Typography ───────────────────────────────────────────────── */
+.item-text {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.item-subtext {
+  font-size: 12px;
+  opacity: 0.4;
+}
+
+.item-image {
+  margin-right: 10px;
+}
+
+/* ─── Quick Activation Labels ───────────────────────────────────── */
+.item-quick-activation {
+  background: rgba(255, 255, 255, 0.1);
+  color: @theme_fg_color;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  margin-left: 8px;
+}
+
+/* ─── Preview Pane ─────────────────────────────────────────────── */
+.preview {
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 12px;
+  border-radius: 0 6px 6px 0;
+  color: @theme_fg_color;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* ─── Keybinds ──────────────────────────────────────────────────── */
+.keybinds {
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  font-size: 11px;
+  color: @theme_fg_dim;
+}
+
+.keybind-label {
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 10px;
+}
+
+/* ─── Utility ───────────────────────────────────────────────────── */
+scrollbar {
+  opacity: 0;
+}
+
+.error {
+  padding: 8px 12px;
+  background: @error_bg_color;
+  color: @error_fg_color;
+  border-radius: 4px;
+}
