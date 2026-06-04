@@ -1,0 +1,274 @@
+*nvim-config.txt*  Personal Neovim Configuration
+
+==============================================================================
+INTRODUCTION                                              *nvim-config-intro*
+
+Personal Neovim config bootstrapped from kickstart.nvim. Uses lazy.nvim for
+plugin management with fast startup via lazy-loading.
+
+Leader key: <Space>
+
+==============================================================================
+PLUGINS                                                    *nvim-config-plugins*
+
+Telescope       Fuzzy finder
+Treesitter      Syntax highlighting & text objects
+Neotree         File explorer
+Oil             Edit filesystem like a buffer
+Gitsigns        Git gutters & hunks
+Flash           Jump to any visible text
+Lazygit         Git TUI
+which-key       Keymap hints
+mini.nvim      Comment, surround, pairs, indent-scope, ai, notify
+nvim-lspconfig  LSP client configuration (mason managed)
+Blink.cmp       Autocompletion
+Formatting      Auto-format on save
+Todo-comments   Highlight & search TODO/FIX/HACK/etc.
+
+==============================================================================
+OPTIONS                                                    *nvim-config-options*
+
+UI & General~
+  - Nerd Font enabled (vim.g.have_nerd_font = true)
+  - Relative line numbers
+  - Transparent background (Normal bg = none)
+  - cmdheight = 0
+  - scrolloff = 10, smoothscroll
+  - 4-space tabs (expandtab)
+  - Clipboard: unnamedplus (system clipboard)
+  - ripgrep for grep (:grep uses rg)
+
+File Management~
+  - No swap/backup files
+  - Persistent undo (undofile)
+  - shada limited for fast startup
+
+Search~
+  - Smart case (ignorecase + smartcase)
+  - inccommand = split (live substitution preview)
+
+Diagnostics~
+  - Severity sorted, rounded float borders
+  - Virtual text enabled, virtual_lines disabled (toggle with |gk|)
+  - Float on cursorhold
+
+==============================================================================
+KEYMAPS                                                    *nvim-config-keymaps*
+
+Basics~
+  ;              Enter command mode (:)
+  <Esc>          Clear search highlights
+  <C-h/j/k/l>   Window navigation
+  <C-d/u>       Half-page down/up (centered)
+  gv             Reselect last visual selection
+  x then p       Paste without replacing selection
+  <leader>x      Write and quit (:wq)
+
+Lines & Text~
+  <A-j/k>        Move line(s) up/down (normal & visual)
+  < / >          Indent/dedent (reselects in visual)
+
+Diagnostics~
+  ]d             Next diagnostic (float)
+  [d             Previous diagnostic (float)
+  <leader>q      Toggle Diagnostic Quickfix List
+  gk             Toggle virtual_lines for diagnostics
+
+Terminal~
+  <leader>tt     Toggle
+  <leader>tc     Close
+  <Esc><Esc>     Exit terminal mode
+
+Utilities~
+  <leader>wc     Clean up ShaDa temp files
+
+==============================================================================
+TELESCOPE                                            *nvim-config-telescope*
+
+Search~
+  <leader>sf     [F]iles
+  <leader>sg     By [G]rep
+  <leader>sw     Current [W]ord
+  <leader>sd     [D]iagnostics
+  <leader>sr     [R]esume
+  <leader>s.     Recent [.] Files
+  <leader>ss     [S]elect Telescope
+  <leader>sh     [H]elp
+  <leader>sk     [K]eymaps
+  <leader>sn     [N]eovim files
+
+Git~
+  <leader>gf     [F]iles
+  <leader>gc     [C]ommits
+  <leader>gC     [B]uffer [C]ommits
+  <leader>gb     [B]ranches
+  <leader>gs     [S]tatus
+
+Buffers~
+  <leader>bb     [B]uffers
+  <leader>br     [R]ecent
+  <leader>bm     [M]arks
+
+Telescope Insert-mode mappings:~
+  <C-j/k>       Move selection down/up
+  <C-c>         Close
+  <C-x>         Open horizontal split
+  <C-v>         Open vertical split
+  <C-t>         Open in new tab
+  <C-q>         Send to quickfix list
+  <C-d>         Delete buffer (in buffer picker)
+
+==============================================================================
+FLASH                                                      *nvim-config-flash*
+
+  s (n,x,o)     Flash jump
+  S (n,x,o)     Flash Treesitter (select treesitter node)
+  r (o)          Remote Flash (operate on remote text)
+  R (o,x)        Treesitter Search
+  <C-s> (c)      Toggle Flash Search (in / or ?)
+
+==============================================================================
+GITSIGNS                                                *nvim-config-gitsigns*
+
+Navigation~
+  ]c             Next hunk
+  [c             Previous hunk
+
+Hunks~
+  <leader>hs     [S]tage Hunk
+  <leader>hr     [R]eset Hunk
+  <leader>hS     Stage [S]erial Buffer
+  <leader>hu     [U]ndo Stage
+  <leader>hR     [R]eset Buffer
+  <leader>hp     [P]review Hunk
+
+Blame & Diff~
+  <leader>hb     [B]lame Line
+  <leader>ub     [B]lame
+  <leader>hd     [D]iff This
+  <leader>hD     Diff This [~]
+  ih (o,x)       Select hunk (text object)
+
+==============================================================================
+NEOTREE                                                  *nvim-config-neotree*
+
+  <leader>e      Toggle Explorer (right side, 25 width)
+
+==============================================================================
+OIL                                                          *nvim-config-oil*
+
+  -              Open parent directory as editable buffer
+
+==============================================================================
+LAZYGIT                                                  *nvim-config-lazygit*
+
+  <leader>gg     Open Lazygit
+
+==============================================================================
+LSP                                                          *nvim-config-lsp*
+
+  gd             Go to definitions (Telescope)
+  gD             Go to declaration
+  grr            References (Telescope)
+  gri            Implementations (Telescope)
+  grt            Type definitions (Telescope)
+  grn            Rename symbol
+  gra            Code action
+  gO             Document symbols (Telescope)
+  <leader>sS     Workspace symbols (Telescope)
+  K              Hover documentation (built-in)
+  Format on save is enabled
+  Mason manages: lua_ls, stylua, ts_ls, vue_ls
+
+==============================================================================
+MINI.SURROUND                                      *nvim-config-mini-surround*
+
+  gsa            Add surrounding
+  gsd            Delete surrounding
+  gsr            Replace surrounding
+  gsf            Find surrounding (right)
+  gsF            Find surrounding (left)
+  gsh            Highlight surrounding
+  gsn            Update n_lines
+
+Other mini modules loaded:~
+  mini.comment       gc / gcc to comment
+  mini.pairs         Auto bracket pairs
+  mini.ai            Extended text objects (a/i)
+  mini.indentscope   Indent scope highlighting
+  mini.notify        Notification UI
+
+==============================================================================
+SESSIONS                                                *nvim-config-sessions*
+
+  <leader>ws     [S]ave
+  <leader>wl     [L]oad
+  <leader>wd     [D]elete
+  :SessionSave   Save session
+  :SessionLoad   Load session
+  :SessionDelete Delete current session
+  :SessionDeletePattern <pat>  Bulk delete by pattern
+
+==============================================================================
+BUFFER TABS                                            *nvim-config-tabs*
+
+  <Tab>          Next buffer
+  <S-Tab>        Previous buffer
+  <leader>bd     Delete buffer
+  <leader>bn     New empty buffer
+  Tabline shows listed buffers with icons, modified flag, diagnostics.
+
+==============================================================================
+TODO-COMMENTS                                          *nvim-config-todo*
+
+  ]t             Next todo comment
+  [t             Previous todo comment
+  <leader>st     Search todos (Telescope)
+
+==============================================================================
+WHICH-KEY                                              *nvim-config-whichkey*
+
+Displays pending keybinds. Groups:
+  <leader>b      [B]uffer
+  <leader>s      [S]earch
+  <leader>g      [G]it
+  <leader>u      [U]I / Toggles
+  <leader>w      [S]essions
+  <leader>t      [T]erminal
+  <leader>l      [L]azy
+  <leader>e      [E]xplorer
+  <leader>q      [Q]uickfix / Quit
+  <leader>h      Git [H]unk
+  gs             [S]urround
+  gr             LSP Actions
+
+==============================================================================
+CONFIG STRUCTURE                                       *nvim-config-structure*
+
+>
+  init.lua              Entry point, boots lazy.nvim
+  lua/config/
+    keymaps.lua         Custom keymaps & autocmds
+    options.lua         Vim options & autocmds
+    statusline.lua      Custom statusline
+    util/
+      floaterminal.lua  Floating terminal
+      session.lua       Session save/load/delete
+      tabs.lua          Buffer tabline
+    plugins/            Plugin specs (one file per plugin)
+    lsp/                LSP, autocomplete, formatter configs
+<
+
+==============================================================================
+INSTALLATION                                          *nvim-config-install*
+
+  Linux/macOS: >
+    git clone https://github.com/lubasinkal/nvim.git \
+      "${XDG_CONFIG_HOME:-$HOME/.config}/nvim"
+<
+  Windows: >
+    git clone https://github.com/lubasinkal/nvim.git "$env:LOCALAPPDATA\nvim"
+<
+  Run `nvim` — plugins install automatically via lazy.nvim.
+
+ vim:tw=78:ts=8:ft=help:norl:
