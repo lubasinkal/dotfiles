@@ -1,24 +1,18 @@
-# Minimalist Slate Config
+# Minimalist Slate Config — matches walker middle-ground theme
 
 font-family = "JetBrains Mono"
 font-size = 13
 background-opacity = 0.85
-background-blur = true
-
-# Window
-window-theme = ghostty
-window-padding-x = 14
-window-padding-y = 14
-confirm-close-surface=false
-resize-overlay = never
-gtk-toolbar-style = flat
+# background-blur = true
+window-padding-x = 8
+window-padding-y = 8
 
 foreground = #fafafa
 background = #18181b
-cursor-color = #fafafa
+cursor-color = #a855f7
 cursor-text = #18181b
-selection-background = #3f3f46
-selection-foreground = #fafafa
+selection-background = #a855f7
+selection-foreground = #18181b
 
 palette = 0=#27272a
 palette = 1=#ef4444
