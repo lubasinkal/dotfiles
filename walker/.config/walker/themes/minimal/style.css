@@ -1,0 +1,129 @@
+/* ─── Middle Ground Theme ─────────────────────────────────────── */
+/* Soft glass + omarchy zones + violet accent                   */
+
+@define-color base           rgba(24, 24, 27, 0.85);
+@define-color text           #fafafa;
+@define-color border         #a855f7;
+@define-color background     rgba(39, 39, 42, 0.5);
+@define-color selected-text  #c084fc;
+@define-color accent         rgba(168, 85, 247, 0.15);
+@define-color accent_strong  #a855f7;
+@define-color error_bg       #ef4444;
+@define-color error_fg       #fafafa;
+
+* {
+  all: unset;
+}
+
+* {
+  font-family: "JetBrains Mono";
+  font-size: 15px;
+  color: @text;
+}
+
+scrollbar {
+  opacity: 0;
+}
+
+.normal-icons {
+  -gtk-icon-size: 16px;
+}
+
+.large-icons {
+  -gtk-icon-size: 32px;
+}
+
+/* ─── Main Window — subtle rounding, light blur, colored border ── */
+.box-wrapper {
+  background: @base;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1.5px solid @border;
+  backdrop-filter: blur(20px) saturate(150%);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+/* ─── Search Bar — own zone, but matches aesthetic feel ───────── */
+.search-container {
+  background: @background;
+  padding: 8px 12px;
+  border-radius: 4px;
+}
+
+.input {
+  caret-color: @accent_strong;
+}
+
+.input placeholder {
+  opacity: 0.5;
+}
+
+.input:focus,
+.input:active {
+  box-shadow: none;
+  outline: none;
+}
+
+/* ─── List & Selection — soft accent tint ─────────────────────── */
+child:selected .item-box * {
+  color: @selected-text;
+}
+
+child:selected {
+  background: @accent;
+}
+
+.item-box {
+  padding: 8px 12px;
+  border-radius: 4px;
+}
+
+.item-text-box {
+  all: unset;
+  padding: 4px 0;
+}
+
+.item-subtext {
+  font-size: 11px;
+  opacity: 0.4;
+}
+
+.item-image {
+  margin-right: 12px;
+  -gtk-icon-transform: scale(0.9);
+}
+
+/* ─── Quick Activation Labels — kept from aesthetic ──────────── */
+.item-quick-activation {
+  background: rgba(255, 255, 255, 0.08);
+  color: @text;
+  border-radius: 3px;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 500;
+  margin-left: 8px;
+}
+
+/* ─── Keybinds — own zone, but softened ───────────────────────── */
+.keybinds {
+  background: @background;
+  padding: 8px 12px;
+  margin-top: 8px;
+  border-radius: 4px;
+}
+
+.keybind-label {
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 10px;
+}
+
+/* ─── Error ───────────────────────────────────────────────────── */
+.error {
+  background: @error_bg;
+  color: @error_fg;
+  padding: 8px 12px;
+  border-radius: 4px;
+}
