@@ -4,7 +4,7 @@
 
 # If not running interactively, don't do anything
 [[ $- != *i* ]] && return
-
+alias bunupdate='(cd ~/.bun/install/global && bun update --latest)'
 alias ls='ls --color=auto'
 alias grep='grep --color=auto'
 alias c='clear'
