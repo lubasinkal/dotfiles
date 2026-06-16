@@ -8,6 +8,13 @@ configuration {
     location: 0;
     disable-history: false;
     sidebar-mode: false;
+    matching: "fuzzy";
+
+    /* Keybindings */
+	kb-row-left: "Alt+h,Control+Page_Up";
+	kb-row-right: "Alt+l,Control+Page_Down";
+	kb-row-up: "Alt+k,Control+Home";
+    kb-row-down: "Alt+j,Control+End";
 }
 
 @theme "/dev/null"
