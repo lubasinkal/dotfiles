@@ -1,5 +1,5 @@
 " ============================================================================
-" ~/.vimrc — Clean & Improved Minimal Vim Configuration
+" Minimal Vim Configuration — mirrors nvim setup
 " ============================================================================
 
 " ---- Leader ----------------------------------------------------------------
@@ -11,7 +11,6 @@ set nocompatible
 filetype plugin indent on
 syntax enable
 
-" Create necessary directories
 let s:vimdir = expand('~/.vim')
 if !isdirectory(s:vimdir)
     call mkdir(s:vimdir, 'p')
@@ -21,27 +20,20 @@ if !isdirectory(s:vimdir . '/undo')
 endif
 
 " ---- Options ---------------------------------------------------------------
-" UI
 set number relativenumber
 set signcolumn=yes
 set cursorline
 set scrolloff=10
 set sidescrolloff=8
 set splitright splitbelow
-set showcmd
-set laststatus=2
-set ruler
 set list
-set listchars=tab:»\ ,trail:·,nbsp:␣
-set fillchars=eob:\ ,diff:╱,fold:\ 
+set listchars=tab:\ \ ,trail:·
+set fillchars=eob:\ ,diff:╱
 
-" Indentation
 set tabstop=4 shiftwidth=4 softtabstop=4 expandtab
 set breakindent
 set formatoptions-=cro
 
-" Editing
-set hidden
 set confirm
 set autoread
 set noswapfile
@@ -52,31 +44,25 @@ set updatetime=200
 set timeoutlen=300
 set ttimeoutlen=0
 
-" Search
 set ignorecase smartcase
-set hlsearch incsearch
+set hidden
 
-" Completion
 set completeopt=menu,menuone,noselect
 set pumheight=10
 set wildmode=longest:full,full
 set wildoptions=pum
-set wildignore=*.o,*.obj,*.pyc,*.class,*.swp,*.bak,*.cache
 
-" Clipboard & Conceal
 set clipboard=unnamedplus
 set conceallevel=2
 set concealcursor=nc
 
-" Misc
-set synmaxcol=300
+set synmaxcol=200
 set whichwrap+=<,>,[,],h,l
-set iskeyword+=-,_
+set iskeyword+=-
 
-" Grep with ripgrep if available
 if executable('rg')
     set grepprg=rg\ --vimgrep\ --no-heading\ --smart-case
-    set grepformat=%f:%l:%c:%m,%f:%l:%m
+    set grepformat=%f:%l:%c:%m
 endif
 
 " ---- Appearance ------------------------------------------------------------
@@ -86,90 +72,77 @@ highlight SignColumn ctermbg=NONE guibg=NONE
 " ---- Keymaps ---------------------------------------------------------------
 nnoremap ; :
 
-" Better escape
 nnoremap <silent> <Esc> :nohlsearch<CR><Esc>
 
-" Window navigation
 nnoremap <C-h> <C-w>h
 nnoremap <C-j> <C-w>j
 nnoremap <C-k> <C-w>k
 nnoremap <C-l> <C-w>l
 
-" Move lines
 nnoremap <A-j> :m .+1<CR>==
 nnoremap <A-k> :m .-2<CR>==
 vnoremap <A-j> :m '>+1<CR>gv=gv
 vnoremap <A-k> :m '<-2<CR>gv=gv
 
-" Visual mode improvements
 vnoremap < <gv
 vnoremap > >gv
 xnoremap p "_dP
 
-" Quick actions
-nnoremap <leader>w :w<CR>
-nnoremap <leader>q :q<CR>
-nnoremap <leader>b :ls<CR>:b<Space>
+nnoremap K :call <SID>grep_word()<CR>
 
-" Keyword search (fixed)
-nnoremap K :grep! "\b<C-R><C-W>\b"<CR>:cwindow<CR>
+function! s:grep_word() abort
+    let l:word = expand('<cword>')
+    if empty(l:word)
+        return
+    endif
+    execute 'silent grep! "\b' . l:word . '\b"'
+    cwindow
+endfunction
 
 " ---- Autocommands ----------------------------------------------------------
 augroup vimrc_autocmds
     autocmd!
 
-    " Highlight yanked text (fixed & robust)
     autocmd TextYankPost * call s:highlight_yank()
 
-    " Center cursor in insert mode
     autocmd InsertEnter * norm! zz
 
-    " Rebalance windows
     autocmd VimResized * wincmd =
 
-    " Help in vertical split
     autocmd FileType help wincmd L
 
-    " Smart cursorline
     autocmd WinEnter,BufWinEnter * setlocal cursorline
     autocmd WinLeave * setlocal nocursorline
 
-    " Restore cursor position
     autocmd BufReadPost *
         \ if line("'\"") > 1 && line("'\"") <= line("$") |
         \   execute "normal! g`\"" |
         \ endif
 augroup END
 
-" ---- Yank Highlight Function (Fixed) --------------------------------------
+" ---- Yank Highlight --------------------------------------------------------
 function! s:highlight_yank() abort
     if v:event.operator !=# 'y' || empty(v:event.regcontents)
         return
     endif
 
-    " Use marks '[ and '] which are more reliable across Vim versions
     let l:pos1 = getpos("'[")
     let l:pos2 = getpos("']")
+    let l:id = 0
 
-    if l:pos1[1] == l:pos2[1]  " Single line
-        let l:pat = '\%' . l:pos1[1] . 'l\%>' . (l:pos1[2] - 1) . 'c\%<' . (l:pos2[2] + 1) . 'c'
-    else  " Multi-line
-        let l:pat = '\%>' . (l:pos1[1] - 1) . 'l\%<' . (l:pos2[1] + 1) . 'l'
+    if l:pos1[1] == l:pos2[1]
+        let l:len = l:pos2[2] - l:pos1[2] + 1
+        if l:len > 0
+            let l:id = matchaddpos('IncSearch', [[l:pos1[1], l:pos1[2], l:len]], 101)
+        endif
+    else
+        let l:first = max([line('w0'), l:pos1[1]])
+        let l:last = min([line('w$'), l:pos2[1]])
+        let l:pat = '\%>' . (l:first - 1) . 'l\%<' . (l:last + 1) . 'l'
+        let l:id = matchadd('IncSearch', l:pat, 101)
     endif
 
-    let l:id = matchadd('IncSearch', l:pat, 101)
-    call timer_start(250, {-> matchdelete(l:id)})
+    if l:id
+        call timer_start(250, {-> matchdelete(l:id)})
+    endif
 endfunction
-
-" ---- Statusline ------------------------------------------------------------
-set statusline=
-set statusline+=%f\ %m%r%h
-set statusline+=%=
-set statusline+=%{&fileencoding?&fileencoding:&encoding}
-set statusline+=\ \|\ 
-set statusline+=%l:%-2v\ 
-set statusline+=%p%%
-
-" ---- Commands --------------------------------------------------------------
-command! Q q
-command! W w
