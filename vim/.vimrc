@@ -79,16 +79,14 @@ if executable('rg')
     set grepformat=%f:%l:%c:%m,%f:%l:%m
 endif
 
-" ---- Colorscheme / Appearance ----------------------------------------------
-" Transparent background
+" ---- Appearance ------------------------------------------------------------
 highlight Normal ctermbg=NONE guibg=NONE
 highlight SignColumn ctermbg=NONE guibg=NONE
 
 " ---- Keymaps ---------------------------------------------------------------
-" Semicolon as command mode
 nnoremap ; :
 
-" Better escape behavior
+" Better escape
 nnoremap <silent> <Esc> :nohlsearch<CR><Esc>
 
 " Window navigation
@@ -97,71 +95,73 @@ nnoremap <C-j> <C-w>j
 nnoremap <C-k> <C-w>k
 nnoremap <C-l> <C-w>l
 
-" Move lines (Alt+j/k)
+" Move lines
 nnoremap <A-j> :m .+1<CR>==
 nnoremap <A-k> :m .-2<CR>==
 vnoremap <A-j> :m '>+1<CR>gv=gv
 vnoremap <A-k> :m '<-2<CR>gv=gv
 
-" Better indent in visual mode
+" Visual mode improvements
 vnoremap < <gv
 vnoremap > >gv
-
-" Paste over selection without yanking
 xnoremap p "_dP
 
-" Quick save
+" Quick actions
 nnoremap <leader>w :w<CR>
-
-" Quick buffer navigation
 nnoremap <leader>q :q<CR>
 nnoremap <leader>b :ls<CR>:b<Space>
+
+" Keyword search (fixed)
+nnoremap K :grep! "\b<C-R><C-W>\b"<CR>:cwindow<CR>
 
 " ---- Autocommands ----------------------------------------------------------
 augroup vimrc_autocmds
     autocmd!
 
-    " Highlight yanked text
+    " Highlight yanked text (fixed & robust)
     autocmd TextYankPost * call s:highlight_yank()
 
-    " Center cursor when entering insert mode
+    " Center cursor in insert mode
     autocmd InsertEnter * norm! zz
 
-    " Rebalance windows on resize
+    " Rebalance windows
     autocmd VimResized * wincmd =
 
-    " Open help in vertical split
+    " Help in vertical split
     autocmd FileType help wincmd L
 
-    " Cursorline only in active window
+    " Smart cursorline
     autocmd WinEnter,BufWinEnter * setlocal cursorline
     autocmd WinLeave * setlocal nocursorline
 
-    " Remember last cursor position
+    " Restore cursor position
     autocmd BufReadPost *
         \ if line("'\"") > 1 && line("'\"") <= line("$") |
         \   execute "normal! g`\"" |
         \ endif
 augroup END
 
-" ---- Yank Highlight Function -----------------------------------------------
+" ---- Yank Highlight Function (Fixed) --------------------------------------
 function! s:highlight_yank() abort
     if v:event.operator !=# 'y' || empty(v:event.regcontents)
         return
     endif
 
-    let l:pat = '\%>' . (v:event.regstart[1] - 1) . 'l'
-    if v:event.regend[1] == v:event.regstart[1]
-        let l:pat .= '\%>' . (v:event.regstart[2] - 1) . 'c\%<' . (v:event.regend[2] + 1) . 'c'
-    else
-        let l:pat .= '\%<' . (v:event.regend[1] + 1) . 'l'
+    " Use marks '[ and '] which are more reliable across Vim versions
+    let l:pos1 = getpos("'[")
+    let l:pos2 = getpos("']")
+
+    if l:pos1[1] == l:pos2[1]  " Single line
+        let l:pat = '\%' . l:pos1[1] . 'l\%>' . (l:pos1[2] - 1) . 'c\%<' . (l:pos2[2] + 1) . 'c'
+    else  " Multi-line
+        let l:pat = '\%>' . (l:pos1[1] - 1) . 'l\%<' . (l:pos2[1] + 1) . 'l'
     endif
 
     let l:id = matchadd('IncSearch', l:pat, 101)
-    call timer_start(200, {-> matchdelete(l:id)})
+    call timer_start(250, {-> matchdelete(l:id)})
 endfunction
 
-" ---- Statusline (Minimal but useful) ---------------------------------------
+" ---- Statusline ------------------------------------------------------------
 set statusline=
 set statusline+=%f\ %m%r%h
 set statusline+=%=
@@ -170,10 +170,6 @@ set statusline+=\ \|\
 set statusline+=%l:%-2v\ 
 set statusline+=%p%%
 
-" ---- Convenience -----------------------------------------------------------
-" Make :Q same as :q (common typo)
+" ---- Commands --------------------------------------------------------------
 command! Q q
 command! W w
-
-" Faster keyword lookup
-nnoremap K :grep! "\b<C-R><C-W>\b"<CR>:cw<CR>
