@@ -12,6 +12,7 @@ Each directory in this repository represents a "package" that can be stowed into
 - `ghostty/`: Contains `.config/ghostty/`.
 - `nvim/`: A git submodule containing `.config/nvim/`.
 - `starship/`: Contains `.config/starship.toml`.
+- `vim/`: Contains `.vimrc` — minimal Vim config inspired by nvim.
 - `walker/`: Contains `.config/walker/`.
 - `wezterm/`: Contains `.wezterm.lua`.
 - `zsh/`: Contains `.zshrc`.
@@ -55,7 +56,7 @@ To set up these dotfiles on a new machine:
 3. Stow each package:
    ```bash
    cd ~/dotfiles
-   stow bash doom git ghostty nvim starship walker wezterm zsh
+   stow bash doom git ghostty nvim starship vim walker wezterm zsh
    ```
 
 ## Workflow Tip
