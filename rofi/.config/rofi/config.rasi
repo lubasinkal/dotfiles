@@ -7,9 +7,9 @@ configuration {
     drun-display-format: "{name}";
     location: 0;
     disable-history: false;
-    sort: false;
+    sort: true;
     sidebar-mode: false;
-    matching: "fuzzy";
+    matching: "normal";
 
     /* Keybindings */
 	kb-row-left: "Alt+h,Control+Page_Up";
