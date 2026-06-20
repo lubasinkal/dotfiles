@@ -8,5 +8,11 @@ fi
 source /usr/share/cachyos-zsh-config/cachyos-config.zsh
 
 eval "$(zoxide init zsh)"
+alias bunupdate='(cd ~/.bun/install/global && bun update --latest)'
+alias c='clear'
+# uv
+export PATH="$HOME/.local/bin:$PATH"
+# bun
+export PATH="$HOME/.bun/bin:$PATH"
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
