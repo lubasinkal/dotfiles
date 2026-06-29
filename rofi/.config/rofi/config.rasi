@@ -4,37 +4,34 @@ configuration {
     show-icons: true;
     icon-theme: "Papirus";
     drun-display-format: "{icon} {name}";
-    display-drun: " :";
-    display-run: " :";
-    display-window: " :";
-    display-windowcd: " :";
-    display-combi: " :";
-
+    display-drun: "";
+    display-run: "";
+    display-window: "";
+    display-windowcd: "";
+    display-combi: "";
 
     location: 0;
     disable-history: false;
     sort: true;
     matching: "normal";
 
-    /* Keybindings */
-	kb-row-left: "Alt+h,Control+Page_Up";
-	kb-row-right: "Alt+l,Control+Page_Down";
-	kb-row-up: "Alt+k,Control+Home";
+    kb-row-left: "Alt+h,Control+Page_Up";
+    kb-row-right: "Alt+l,Control+Page_Down";
+    kb-row-up: "Alt+k,Control+Home";
     kb-row-down: "Alt+j,Control+End";
 }
 
 @theme "/dev/null"
 
 * {
-    /* Walker Aesthetic Colors */
-    bg-color:            rgba(15, 15, 20, 0.8);
-    bg-alt:              rgba(30, 30, 46, 0.6);
-    accent-color:        #7c5cfc;
-    accent-hover:        rgba(124, 92, 252, 0.15);
-    fg-color:            #e0e0e0;
-    fg-dim:              rgba(224, 224, 224, 0.4);
-    border-color:        rgba(124, 92, 252, 0.4);
-    
+    bg-color:            rgba(30, 30, 40, 0.85);
+    bg-alt:              rgba(45, 45, 60, 0.6);
+    accent-color:        #8b7cf6;
+    accent-hover:        rgba(139, 124, 246, 0.12);
+    fg-color:            #e8e8ed;
+    fg-dim:              rgba(232, 232, 237, 0.45);
+    border-color:        rgba(139, 124, 246, 0.3);
+
     background-color:    transparent;
     text-color:          @fg-color;
     margin:              0;
@@ -44,46 +41,48 @@ configuration {
 
 window {
     background-color:    @bg-color;
-    border:              1.5px;
+    border:              1px;
     border-color:        @border-color;
-    border-radius:       8px;
-    width:               400px;       /* Shrunk width from 600px */
-    padding:             12px;        /* Tighter inner padding */
+    border-radius:       10px;
+    width:               380px;
+    padding:             14px;
 }
 
 mainbox {
     children:            [ inputbar, listview ];
-    spacing:             10px;        /* Reduced spacing between search and list */
+    spacing:             12px;
 }
 
 inputbar {
     children:            [ entry ];
+    background-color:    @bg-alt;
+    border-radius:       8px;
+    padding:             2px;
 }
 
 entry {
-    background-color:    rgba(255, 255, 255, 0.05);
+    background-color:    transparent;
     text-color:          @fg-color;
-    border:              1px;
-    border-color:        rgba(255, 255, 255, 0.1);
+    border:              0px;
     border-radius:       6px;
-    padding:             8px 12px;    /* Slimmed down input field */
-    placeholder:         "Search...";
-    placeholder-color:   @fg-dim;
+    padding:            10px 14px;
+    placeholder:        "Search...";
+    placeholder-color:  @fg-dim;
 }
 
 listview {
     columns:             1;
-    lines:               6;           /* Cut down from 10 lines to keep it short */
+    lines:               8;
     fixed-height:        false;
     border:              0px;
-    spacing:             4px;         /* Closer item gaps */
+    spacing:             3px;
     scrollbar:           false;
 }
 
 element {
-    padding:             6px 10px;    /* Slimmed down item rows */
+    padding:             8px 12px;
     border-radius:       6px;
-    spacing:             8px;
+    spacing:             10px;
 }
 
 element normal.normal {
@@ -103,12 +102,12 @@ element alternate.normal {
 
 element-text {
     background-color:    transparent;
-    text-color:          inherit;
+    text-color:         inherit;
     vertical-align:      0.5;
 }
 
 element-icon {
-    size:                18px;        /* Made icons smaller (from 24px) */
+    size:                20px;
     background-color:    transparent;
-    text-color:          inherit;
+    text-color:         inherit;
 }
