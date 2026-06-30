@@ -13,7 +13,10 @@ configuration {
     location: 0;
     disable-history: false;
     sort: true;
-    matching: "normal";
+    matching: "fuzzy";
+    case-sensitive: false;
+
+    fullscreen: false;
 
     kb-row-left: "Alt+h,Control+Page_Up";
     kb-row-right: "Alt+l,Control+Page_Down";
