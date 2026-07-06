@@ -1,0 +1,26 @@
+# Auth / secrets
+.pi/agent/auth.json
+
+# Logs
+.pi/agent/pi-debug.log
+.pi/agent/run-history.jsonl
+
+# Sessions (conversation history)
+.pi/agent/sessions/
+.pi/agent/pi-hermes-memory/sessions.db
+
+# Databases (hermes memory)
+.pi/agent/pi-hermes-memory/*.db
+.pi/agent/pi-hermes-memory/*.db-shm
+.pi/agent/pi-hermes-memory/*.db-wal
+.pi/agent/pi-hermes-memory/.skills-migrated-to-extension-storage
+
+# Context mode
+.pi/context-mode/
+
+# Subagent artifacts
+.pi/.pi-subagents/
+
+# Node dependencies
+.pi/agent/npm/node_modules/
+.pi/agent/npm/package-lock.json
