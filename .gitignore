@@ -1,3 +1,4 @@
 /pi/.pi/agent/pi-hermes-memory
-/pi/.pi/agent/projects-memory/fees
+/pi/.pi/agent/projects-memory/*
 /pi/.pi/agent/extensions/herdr-agent-state.ts
+
