@@ -1,32 +1,4 @@
-# Minimalist Slate Config — matches walker middle-ground theme
-
+theme = Vesper
 font-family = "JetBrains Mono"
 font-size = 13
 background-opacity = 0.85
-# background-blur = true
-window-padding-x = 8
-window-padding-y = 8
-
-foreground = #fafafa
-background = #18181b
-cursor-color = #a855f7
-cursor-text = #18181b
-selection-background = #a855f7
-selection-foreground = #18181b
-
-palette = 0=#27272a
-palette = 1=#ef4444
-palette = 2=#22c55e
-palette = 3=#eab308
-palette = 4=#3b82f6
-palette = 5=#a855f7
-palette = 6=#06b6d4
-palette = 7=#a1a1aa
-palette = 8=#3f3f46
-palette = 9=#f87171
-palette = 10=#4ade80
-palette = 11=#facc15
-palette = 12=#60a5fa
-palette = 13=#c084fc
-palette = 14=#22d3ee
-palette = 15=#d4d4d8
