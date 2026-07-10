@@ -346,15 +346,15 @@ window-rule {
 }
 
 // Enable transparency for all windows.
-window-rule {
-    opacity 0.85
-
-    background-effect {
-        xray true
-        blur true
-        noise 0.04
-    }
-}
+// window-rule {
+//     opacity 0.85
+//
+//     background-effect {
+//         xray true
+//         blur true
+//         noise 0.04
+//     }
+// }
 
 // Rounded corners for all windows.
 window-rule {
