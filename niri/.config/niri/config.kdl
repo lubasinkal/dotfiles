@@ -66,7 +66,7 @@ input {
 
     // Focus windows and outputs automatically when moving the mouse into them.
     // Setting max-scroll-amount="0%" makes it work only on windows already fully on screen.
-    // focus-follows-mouse max-scroll-amount="0%"
+    focus-follows-mouse max-scroll-amount="0%"
 }
 
 // You can configure outputs by their name, which you can find
@@ -111,7 +111,10 @@ input {
 // https://niri-wm.github.io/niri/Configuration:-Layout
 layout {
     // Set gaps around windows in logical pixels.
-    gaps 16
+    gaps 1
+
+    // Transparent background for noctalia-shell wallpaper
+    background-color "transparent"
 
     // When to center a column when changing focus, options are:
     // - "never", default behavior, focusing an off-screen column will keep at the left
@@ -156,10 +159,7 @@ layout {
     // You can change how the focus ring looks.
     focus-ring {
         // Uncomment this line to disable the focus ring.
-        // off
-
-        // How many logical pixels the ring extends out from the windows.
-        width 4
+        off
 
         // Colors can be set in a variety of ways:
         // - CSS named colors: "red"
@@ -305,6 +305,12 @@ animations {
     // slowdown 3.0
 }
 
+// Layer rules for noctalia-shell
+layer-rule {
+    match namespace="^noctalia-wallpaper"
+    place-within-backdrop true
+}
+
 // Window rules let you adjust behavior for individual windows.
 // Find more information on the wiki:
 // https://niri-wm.github.io/niri/Configuration:-Window-Rules
@@ -340,11 +346,15 @@ window-rule {
     // block-out-from "screencast"
 }
 
-// Example: enable rounded corners for all windows.
-// (This example rule is commented out with a "/-" in front.)
-/-window-rule {
-    geometry-corner-radius 12
-    clip-to-geometry true
+// Enable transparency for all windows.
+window-rule {
+    opacity 0.85
+
+    background-effect {
+        xray true
+        blur true
+        noise 0.04
+    }
 }
 
 binds {
