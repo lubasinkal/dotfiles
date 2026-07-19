@@ -1,1 +1,50 @@
-onboarding = false
+# ── Theme ─────────────────────────────────────────────────────────
+[theme]
+name = "terminal"                          # follow host terminal ANSI palette
+
+[theme.custom]
+accent = "#5ef1ff"                         # cyberdream cyan
+blue   = "#5ea1ff"
+green  = "#5eff6c"
+red    = "#ff6e5e"
+yellow = "#f1ff5e"
+purple = "#bd5eff"
+pink   = "#ff5ea0"
+orange = "#ffbd5e"
+
+# ── UI ────────────────────────────────────────────────────────────
+[ui]
+pane_borders              = true           # clean split borders
+pane_gaps                 = false          # no gaps — tighter, modern
+hide_tab_bar_when_single_tab = true        # one tab = no tab bar
+confirm_close             = false          # snappy, no prompts
+prompt_new_tab_name       = false          # auto-name tabs
+copy_on_select            = true
+sidebar_collapsed_mode    = "hidden"       # collapsed = invisible
+
+# ── Sidebar ───────────────────────────────────────────────────────
+[ui.sidebar]
+row_gap = 0
+
+[ui.sidebar.agents]
+row_gap = 0
+rows = [["state_icon", "workspace"], ["agent"]]
+
+[ui.sidebar.spaces]
+row_gap = 0
+rows = [["state_icon", "workspace"], ["branch"]]
+
+# ── Sound & Notifications ─────────────────────────────────────────
+[ui.sound]
+enabled = false
+
+[ui.toast]
+delivery = "off"                           # no popup notifications
+
+# ── Notifications ─────────────────────────────────────────────────
+[ui.toast.clipboard]
+enabled = false                            # no copy toast
+
+# ── Keys ──────────────────────────────────────────────────────────
+[keys]
+prefix = "ctrl+b"
