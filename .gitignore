@@ -3,3 +3,4 @@
 /pi/.pi/agent/extensions/herdr-agent-state.ts
 
 /pi/.pi/agent/.pi-hermes-locks.sqlite
+/pi/.pi/agent/models-store.json
