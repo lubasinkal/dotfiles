@@ -44,13 +44,17 @@ rows = [
 
 # ── Sound & Notifications ─────────────────────────────────────────
 [ui.sound]
-enabled = false
+enabled = true
 
 [ui.toast]
-delivery = "off"
+delivery = "herdr"
+delay_seconds = 1
+
+[ui.toast.herdr]
+position = "bottom-right"
 
 [ui.toast.clipboard]
-enabled = false
+enabled = true
 
 # ── Keys ──────────────────────────────────────────────────────────
 [keys]
