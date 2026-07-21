@@ -4,3 +4,6 @@
 
 /pi/.pi/agent/.pi-hermes-locks.sqlite
 /pi/.pi/agent/models-store.json
+
+# tmux plugins (installed by TPM)
+/tmux/.config/tmux/plugins/

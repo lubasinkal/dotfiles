@@ -14,6 +14,7 @@ Each directory in this repository represents a "package" that can be stowed into
 - `nvim/`: A git submodule containing `.config/nvim/`.
 - `pi/`: Contains `.pi/` — opencode agent configurations.
 - `starship/`: Contains `.config/starship.toml`.
+- `tmux/`: Contains `.config/tmux/tmux.conf` — opinionated config with Vesper-inspired theme, mouse support, vim-style navigation, and TPM plugin manager.
 - `vim/`: Contains `.vimrc` — minimal Vim config inspired by nvim.
 - `walker/`: Contains `.config/walker/`.
 - `wezterm/`: Contains `.wezterm.lua`.
@@ -58,8 +59,21 @@ To set up these dotfiles on a new machine:
 3. Stow each package:
    ```bash
    cd ~/dotfiles
-    stow bash doom git ghostty herdr nvim pi starship vim walker wezterm zsh
+   stow bash doom git ghostty herdr nvim pi starship tmux vim walker wezterm zsh
    ```
+
+## Tmux Setup
+
+After stowing, the config references [TPM (Tmux Plugin Manager)](https://github.com/tmux-plugins/tpm) for plugins. On a new machine:
+
+```bash
+# Clone TPM
+git clone https://github.com/tmux-plugins/tpm ~/.config/tmux/plugins/tpm
+
+# Start tmux and install plugins (prefix + I, capital i)
+tmux
+# Then press: Ctrl-b, then Shift-i
+```
 
 ## Workflow Tip
 
