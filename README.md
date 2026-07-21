@@ -54,7 +54,7 @@ To set up these dotfiles on a new machine:
 1. Install `stow` and `git`.
 2. Clone this repository recursively (to include submodules):
    ```bash
-   git clone --recursive <your-dotfiles-repo-url> ~/dotfiles
+   git clone --recursive https://github.com/lubasinkal/dotfiles.git ~/dotfiles
    ```
 3. Stow each package:
    ```bash
