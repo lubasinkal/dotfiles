@@ -1,0 +1,13 @@
+{
+  "name": "pi-extensions",
+  "private": true,
+  "dependencies": {
+    "context-mode": "^1.0.169",
+    "pi-hermes-memory": "^0.9.1",
+    "pi-subagents": "^0.37.2",
+    "pi-web-access": "^0.16.0"
+  },
+  "allowScripts": {
+    "better-sqlite3": true
+  }
+}

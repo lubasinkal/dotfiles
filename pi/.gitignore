@@ -26,3 +26,12 @@
 # Node dependencies
 .pi/agent/npm/node_modules/
 .pi/agent/npm/package-lock.json
+
+# Regenerated on startup
+.pi/agent/models-store.json
+.pi/agent/.pi-hermes-locks.sqlite*
+.pi/agent/projects-memory/.pi-hermes-locks.sqlite*
+
+# Hermes memory — ALL personal/project context (not safe for public repo)
+.pi/agent/pi-hermes-memory/
+.pi/agent/projects-memory/
