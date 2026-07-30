@@ -1,10 +1,5 @@
-/pi/.pi/agent/pi-hermes-memory
-/pi/.pi/agent/projects-memory/*
+# Pi agent — auto-generated files (config tracked in pi/.gitignore)
 /pi/.pi/agent/extensions/herdr-agent-state.ts
-
-/pi/.pi/agent/.pi-hermes-locks.sqlite
-/pi/.pi/agent/models-store.json
 
 # tmux plugins (installed by TPM)
 /tmux/.config/tmux/plugins/
-/pi/.pi/agent
