@@ -18,7 +18,7 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { isToolCallEventType } from "@earendil-works/pi-coding-agent";
 
-const MAX_LINES = 150;
+const MAX_LINES = 250;
 
 export default function (pi: ExtensionAPI) {
 	pi.on("tool_call", async (event, _ctx) => {

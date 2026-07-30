@@ -1,46 +1,42 @@
 /**
  * Context Pruner Extension
  *
- * Prunes oversized tool results and removes noise before each LLM call,
- * dramatically reducing token consumption on long sessions.
+ * Prunes oversized tool results before each LLM call, keeping recent work
+ * intact while trimming old history that the model only needs a reminder of.
  *
- * ## What it does
+ * ## Strategy
  *
- * 1. Truncates tool result text content beyond 4000 chars
- *    — The model already saw these results when fresh. On subsequent turns
- *      it only needs a reminder, not the full 50 KB read output.
- * 2. Removes empty / trivial thinking blocks (< 30 chars)
- *    — Pure noise, zero signal.
- * 3. Handles string content (some providers use `role: "user"` with a
- *    plain string instead of structured content blocks).
+ * 1. **Keep the last 2 tool results untouched** — the model is still actively
+ *    reasoning about its most recent tool interactions.
+ * 2. **Older tool results** are truncated to 4 KB (or 2 KB for `read`
+ *    results — the model already saw the file).
+ * 3. **Empty / trivial thinking blocks** (< 30 chars) are removed.
  *
  * ## Expected savings
  *
- * In a typical 20+ turn session this eliminates 50–80 % of tool result
- * bytes re-sent on every turn after the first.
- *
- * ## Install
- *
- *   cp context-pruner.ts ~/.pi/agent/extensions/
+ * In a 20+ turn session this eliminates 50–80 % of re-sent tool result
+ * bytes while preserving active working memory.
  *
  * ## Thresholds (override via settings.json)
  *
  *   "contextPruner": {
  *     "maxToolResultChars": 4000,
+ *     "maxReadResultChars": 2000,
  *     "minThinkingChars": 30
  *   }
  */
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
-// ── defaults (overridable via settings.json) ──
 const DEFAULTS = {
 	maxToolResultChars: 4_000,
+	maxReadResultChars: 2_000,
 	minThinkingChars: 30,
 };
 
-// Track cumulative pruned bytes across turns so the toast only fires
-// when there's NEW pruning, not the same old blocks every turn.
+/** Number of most-recent tool-result messages to leave completely untouched. */
+const KEEP_LAST_RESULTS = 2;
+
 let prevCumulative = 0;
 
 export default function (pi: ExtensionAPI) {
@@ -49,22 +45,44 @@ export default function (pi: ExtensionAPI) {
 		let prunedTotal = 0;
 		let blocksAffected = 0;
 
-		for (const msg of event.messages) {
-			// Some providers / message types carry content as a plain string.
+		// ── 1st pass: find tool-result message indices to protect ──
+		const toolResultIdx: number[] = [];
+		for (let i = 0; i < event.messages.length; i++) {
+			const m = event.messages[i];
+			if (m.role === "toolResult" || m.role === "tool" || hasToolResultBlock(m)) {
+				toolResultIdx.push(i);
+			}
+		}
+		const protect = new Set(toolResultIdx.slice(-KEEP_LAST_RESULTS));
+
+		// ── 2nd pass: prune unprotected messages ──
+		for (let mi = 0; mi < event.messages.length; mi++) {
+			const msg = event.messages[mi];
+
+			// Pass-through for protected tool results
+			if (protect.has(mi)) continue;
+
+			// Plain-string content
 			if (typeof msg.content === "string") {
-				if (msg.content.length > settings.maxToolResultChars) {
-					const excess = msg.content.length - settings.maxToolResultChars;
+				const threshold = msg.role === "tool" || msg.role === "toolResult"
+					? settings.maxToolResultChars
+					: settings.maxToolResultChars;
+				if (msg.content.length > threshold) {
+					const excess = msg.content.length - threshold;
 					prunedTotal += excess;
-				blocksAffected++;
-				msg.content =
-						msg.content.slice(0, settings.maxToolResultChars) +
+					blocksAffected++;
+					msg.content =
+						msg.content.slice(0, threshold) +
 						`\n\n[pruned: ${excess.toLocaleString()} chars]`;
 				}
 				continue;
 			}
 
-			// Structured content blocks.
 			if (!Array.isArray(msg.content)) continue;
+
+			// Determine per-message threshold
+			const isRead = msg.role === "toolResult" && (msg as any).toolName === "read";
+			const perMsgThreshold = isRead ? settings.maxReadResultChars : settings.maxToolResultChars;
 
 			const newContent: Array<Record<string, unknown>> = [];
 
@@ -83,20 +101,20 @@ export default function (pi: ExtensionAPI) {
 
 				// ── tool_result blocks (Anthropic format inside user messages) ──
 				if (block.type === "tool_result") {
-					newContent.push(pruneToolResultBlock(block, settings, (n) => (prunedTotal += n), () => blocksAffected++));
+					newContent.push(pruneToolResultBlock(block, perMsgThreshold, (n) => (prunedTotal += n), () => blocksAffected++));
 					continue;
 				}
 
 				// ── plain text blocks ──
 				if (block.type === "text" && typeof block.text === "string") {
-					if (block.text.length > settings.maxToolResultChars) {
-						const excess = block.text.length - settings.maxToolResultChars;
+					if (block.text.length > perMsgThreshold) {
+						const excess = block.text.length - perMsgThreshold;
 						prunedTotal += excess;
 						blocksAffected++;
 						newContent.push({
 							...block,
 							text:
-								block.text.slice(0, settings.maxToolResultChars) +
+								block.text.slice(0, perMsgThreshold) +
 								`\n\n[pruned: ${excess.toLocaleString()} chars]`,
 						});
 						continue;
@@ -105,14 +123,13 @@ export default function (pi: ExtensionAPI) {
 					continue;
 				}
 
-				// Preserve everything else (toolCall, image, etc.)
 				newContent.push(block);
 			}
 
 			msg.content = newContent;
 		}
 
-		// Only notify when there's NEW pruning beyond what was already pruned.
+		// Notify on net new pruning only
 		const delta = prunedTotal - prevCumulative;
 		if (delta > 0) {
 			const saved = delta < 1_000
@@ -136,51 +153,46 @@ export default function (pi: ExtensionAPI) {
 
 // ── helpers ────────────────────────────────────────────────────────────
 
-/**
- * Deep-prune text content inside a `tool_result` block.
- *
- * The `.content` field can be:
- *  - a plain string
- *  - an array of content blocks (TextContent / ImageContent / …)
- *  - absent
- */
+/** Quick check whether a message contains an Anthropic-format tool_result block. */
+function hasToolResultBlock(msg: Record<string, unknown>): boolean {
+	if (!Array.isArray(msg.content)) return false;
+	return msg.content.some((b: any) => b?.type === "tool_result");
+}
+
 function pruneToolResultBlock(
 	block: Record<string, unknown>,
-	settings: typeof DEFAULTS,
+	threshold: number,
 	accum: (n: number) => void,
 	markAffected: () => void,
 ): Record<string, unknown> {
 	const raw = block.content;
 
-	// String content
 	if (typeof raw === "string") {
-		if (raw.length <= settings.maxToolResultChars) return block;
-		const excess = raw.length - settings.maxToolResultChars;
+		if (raw.length <= threshold) return block;
+		const excess = raw.length - threshold;
 		accum(excess);
 		markAffected();
 		return {
 			...block,
 			content:
-				raw.slice(0, settings.maxToolResultChars) +
+				raw.slice(0, threshold) +
 				`\n\n[pruned: ${excess.toLocaleString()} chars]`,
 		};
 	}
 
-	// Array of content blocks
 	if (Array.isArray(raw)) {
 		return {
 			...block,
-			content: raw.map((inner) => trimInner(inner, settings, accum, markAffected)),
+			content: raw.map((inner) => trimInner(inner, threshold, accum, markAffected)),
 		};
 	}
 
 	return block;
 }
 
-/** Recursively trim text inside a nested content block. */
 function trimInner(
 	block: unknown,
-	settings: typeof DEFAULTS,
+	threshold: number,
 	accum: (n: number) => void,
 	markAffected: () => void,
 ): unknown {
@@ -188,23 +200,21 @@ function trimInner(
 
 	const b = block as Record<string, unknown>;
 
-	// Leaf text block — do the pruning
 	if (b.type === "text" && typeof b.text === "string") {
-		if ((b.text as string).length <= settings.maxToolResultChars) return block;
-		const excess = (b.text as string).length - settings.maxToolResultChars;
+		if ((b.text as string).length <= threshold) return block;
+		const excess = (b.text as string).length - threshold;
 		accum(excess);
 		markAffected();
 		return {
 			...b,
 			text:
-				(b.text as string).slice(0, settings.maxToolResultChars) +
+				(b.text as string).slice(0, threshold) +
 				`\n\n[pruned: ${excess.toLocaleString()} chars]`,
 		};
 	}
 
-	// Recurse into .content (e.g. nested tool_result → TextContent)
 	if (Array.isArray(b.content)) {
-		return { ...b, content: b.content.map((inner) => trimInner(inner, settings, accum, markAffected)) };
+		return { ...b, content: b.content.map((inner) => trimInner(inner, threshold, accum, markAffected)) };
 	}
 
 	return block;
