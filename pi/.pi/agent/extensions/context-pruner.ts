@@ -39,6 +39,10 @@ const DEFAULTS = {
 	minThinkingChars: 30,
 };
 
+// Track cumulative pruned bytes across turns so the toast only fires
+// when there's NEW pruning, not the same old blocks every turn.
+let prevCumulative = 0;
+
 export default function (pi: ExtensionAPI) {
 	pi.on("context", async (event, ctx) => {
 		const settings = DEFAULTS;
@@ -108,15 +112,22 @@ export default function (pi: ExtensionAPI) {
 			msg.content = newContent;
 		}
 
-		// Show brief toast when pruning happens (once per turn).
-		if (prunedTotal > 0) {
-			const saved = prunedTotal < 1_000
+		// Only notify when there's NEW pruning beyond what was already pruned.
+		const delta = prunedTotal - prevCumulative;
+		if (delta > 0) {
+			const saved = delta < 1_000
+				? `${delta} B`
+				: delta < 1_000_000
+					? `${(delta / 1_000).toFixed(0)} KB`
+					: `${(delta / 1_000_000).toFixed(1)} MB`;
+			const total = prunedTotal < 1_000
 				? `${prunedTotal} B`
 				: prunedTotal < 1_000_000
 					? `${(prunedTotal / 1_000).toFixed(0)} KB`
 					: `${(prunedTotal / 1_000_000).toFixed(1)} MB`;
 			const label = blocksAffected > 0 ? ` (${blocksAffected} blocks)` : "";
-			ctx.ui.notify(`✂️ pruner saved ${saved}${label}`, "info");
+			ctx.ui.notify(`✂️ +${saved} pruned (${total} cumulative)${label}`, "info");
+			prevCumulative = prunedTotal;
 		}
 
 		return { messages: event.messages };
