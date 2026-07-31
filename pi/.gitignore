@@ -1,6 +1,5 @@
 # Auth / secrets
 .pi/agent/auth.json
-.pi/agent/settings.json
 .pi/agent/trust.json
 
 # Logs
