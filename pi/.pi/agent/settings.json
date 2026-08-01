@@ -3,5 +3,9 @@
   "theme": "dark",
   "defaultProvider": "opencode",
   "defaultModel": "deepseek-v4-flash-free",
-  "defaultThinkingLevel": "high"
+  "defaultThinkingLevel": "high",
+  "packages": [
+    "npm:pi-hermes-memory"
+  ],
+  "hideThinkingBlock": true
 }

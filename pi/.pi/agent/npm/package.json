@@ -3,7 +3,7 @@
   "private": true,
   "dependencies": {
     "context-mode": "^1.0.169",
-    "pi-hermes-memory": "^0.9.1",
+    "pi-hermes-memory": "^0.9.2",
     "pi-subagents": "^0.37.2",
     "pi-web-access": "^0.16.0"
   },
