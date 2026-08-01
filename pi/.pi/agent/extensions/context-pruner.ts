@@ -49,7 +49,7 @@ export default function (pi: ExtensionAPI) {
 		const toolResultIdx: number[] = [];
 		for (let i = 0; i < event.messages.length; i++) {
 			const m = event.messages[i];
-			if (m.role === "toolResult" || m.role === "tool" || hasToolResultBlock(m)) {
+			if (isToolResultRole(m.role) || hasToolResultBlock(m)) {
 				toolResultIdx.push(i);
 			}
 		}
@@ -62,11 +62,12 @@ export default function (pi: ExtensionAPI) {
 			// Pass-through for protected tool results
 			if (protect.has(mi)) continue;
 
+			// Skip custom messages without content (bashExecution, compactionSummary, …)
+			if (!("content" in msg)) continue;
+
 			// Plain-string content
 			if (typeof msg.content === "string") {
-				const threshold = msg.role === "tool" || msg.role === "toolResult"
-					? settings.maxToolResultChars
-					: settings.maxToolResultChars;
+				const threshold = settings.maxToolResultChars;
 				if (msg.content.length > threshold) {
 					const excess = msg.content.length - threshold;
 					prunedTotal += excess;
@@ -81,15 +82,19 @@ export default function (pi: ExtensionAPI) {
 			if (!Array.isArray(msg.content)) continue;
 
 			// Determine per-message threshold
-			const isRead = msg.role === "toolResult" && (msg as any).toolName === "read";
+			const isRead = msg.role === "toolResult" && msg.toolName === "read";
 			const perMsgThreshold = isRead ? settings.maxReadResultChars : settings.maxToolResultChars;
 
 			const newContent: Array<Record<string, unknown>> = [];
 
-			for (const block of msg.content) {
+			// Cast blocks to a loose shape: providers may emit Anthropic wire-format
+			// blocks (tool_result) that aren't modeled in the TS block union.
+			for (const rawBlock of msg.content) {
+				const block = rawBlock as { type?: string; text?: string; thinking?: string; content?: unknown };
+
 				// ── thinking blocks: drop empty / trivial ──
 				if (block.type === "thinking") {
-					const len = (block.thinking as string | undefined)?.length ?? 0;
+					const len = block.thinking?.length ?? 0;
 					if (len < settings.minThinkingChars) {
 						prunedTotal += len;
 						blocksAffected++;
@@ -126,7 +131,7 @@ export default function (pi: ExtensionAPI) {
 				newContent.push(block);
 			}
 
-			msg.content = newContent;
+			msg.content = newContent as unknown as typeof msg.content;
 		}
 
 		// Notify on net new pruning only
@@ -154,9 +159,16 @@ export default function (pi: ExtensionAPI) {
 // ── helpers ────────────────────────────────────────────────────────────
 
 /** Quick check whether a message contains an Anthropic-format tool_result block. */
-function hasToolResultBlock(msg: Record<string, unknown>): boolean {
-	if (!Array.isArray(msg.content)) return false;
-	return msg.content.some((b: any) => b?.type === "tool_result");
+function hasToolResultBlock(msg: unknown): boolean {
+	if (!msg || typeof msg !== "object") return false;
+	const content = (msg as { content?: unknown }).content;
+	if (!Array.isArray(content)) return false;
+	return content.some((b: any) => b?.type === "tool_result");
+}
+
+/** Current pi uses role "toolResult"; keep "tool" for legacy sessions. */
+function isToolResultRole(role: string | undefined): boolean {
+	return role === "toolResult" || role === "tool";
 }
 
 function pruneToolResultBlock(

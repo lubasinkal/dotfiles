@@ -34,3 +34,6 @@
 # Hermes memory — ALL personal/project context (not safe for public repo)
 .pi/agent/pi-hermes-memory/
 .pi/agent/projects-memory/
+
+# Typecheck deps (symlinks to global install)
+.pi/agent/node_modules/

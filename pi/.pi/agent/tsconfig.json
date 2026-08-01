@@ -6,12 +6,7 @@
 		"strict": true,
 		"noEmit": true,
 		"skipLibCheck": true,
-		"types": ["node"],
-		"typeRoots": ["~/.bun/install/global/node_modules/@types"],
-		"paths": {
-			"@earendil-works/pi-coding-agent": ["~/.bun/install/global/node_modules/@earendil-works/pi-coding-agent/dist/index.d.ts"],
-			"@earendil-works/pi-ai": ["~/.bun/install/global/node_modules/@earendil-works/pi-ai/dist/index.d.ts"]
-		}
+		"types": ["node"]
 	},
 	"include": ["extensions/**/*.ts"]
 }
