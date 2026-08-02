@@ -150,7 +150,7 @@ const snippetTool = defineTool({
 	name: "snippet",
 	label: "Snippet search",
 	description:
-		"Search code for a symbol, string, or pattern with ripgrep. Returns one compact match-centered line per hit (file:line: text), capped at maxResults. Use this for all code search — prefer it over bash grep/rg pipelines and whole-file reads. query is a ripgrep regex (smart case by default).",
+		"Search code for a symbol, string, or pattern with ripgrep. Returns the total match count plus one compact match-centered line per hit (file:line: text), capped at maxResults. Use this for all code search — prefer it over bash grep/rg pipelines and whole-file reads. query is a ripgrep regex (smart case by default).",
 	promptSnippet: "snippet: rg-powered compact code search (capped one-liners)",
 	promptGuidelines: ["To locate a symbol, string, or pattern anywhere in the repo, use snippet instead of bash grep/rg pipelines."],
 	parameters: Type.Object({
@@ -167,7 +167,7 @@ const snippetTool = defineTool({
 		const maxLen = Math.max(40, Math.min(500, params.maxLineLength ?? 120));
 		const smart = params.caseSensitive ? "" : "-S ";
 		const globs = IGNORES.map((g) => `-g ${q(g)}`).join(" ");
-		const cmd = `rg --hidden --no-heading -n --max-count 5 --max-filesize 2M ${smart}${globs} -e ${q(params.query)} ${q(root)}`;
+		const cmd = `rg --hidden --no-heading -n --max-filesize 2M ${smart}${globs} -e ${q(params.query)} ${q(root)}`;
 		const raw = run(cmd, ctx.cwd, 15_000, 512_000);
 		const wasTruncated = raw.includes("… [truncated");
 		if (/^\[exit 1\]/.test(raw) || !raw.trim()) return textResult(`no matches for ${q(params.query)} in ${root}`);
@@ -175,14 +175,16 @@ const snippetTool = defineTool({
 		const needle = params.query.replace(/\^|\$|\\./g, "").slice(0, 60);
 		const lines: string[] = [];
 		const re = /^(.+?):(\d+):(.*)$/;
+		let totalMatches = 0;
 		for (const line of raw.split("\n")) {
 			const m = re.exec(line);
 			if (!m) continue;
+			totalMatches++;
+			if (lines.length >= maxResults) continue;
 			lines.push(`${m[1]}:${m[2]}: ${center(m[3], needle, maxLen)}`);
-			if (lines.length >= maxResults) break;
 		}
-		const total = wasTruncated ? `≥${lines.length}+` : lines.length;
-		return textResult(`${total} matches in ${root} (showing ${lines.length})\n${lines.join("\n")}`);
+		const total = wasTruncated ? `≥${totalMatches}+` : totalMatches;
+		return textResult(`${total} match${totalMatches === 1 ? "" : "es"} in ${root} (showing ${lines.length})\n${lines.join("\n")}`);
 	},
 });
 
