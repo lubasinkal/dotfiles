@@ -141,8 +141,9 @@ const snippetTool = defineTool({
 	name: "snippet",
 	label: "Snippet search",
 	description:
-		"Search code with ripgrep. Returns compact one-line matches (file:line: centered text), capped at maxResults. Use instead of bash grep+read loops to locate symbols, strings, or patterns. query is a ripgrep regex (smart case by default).",
+		"Search code for a symbol, string, or pattern with ripgrep. Returns one compact match-centered line per hit (file:line: text), capped at maxResults. Use this for all code search — prefer it over bash grep/rg pipelines and whole-file reads. query is a ripgrep regex (smart case by default).",
 	promptSnippet: "snippet: rg-powered compact code search (capped one-liners)",
+	promptGuidelines: ["To locate a symbol, string, or pattern anywhere in the repo, use snippet instead of bash grep/rg pipelines."],
 	parameters: Type.Object({
 		query: Type.String({ description: "Regex or substring to search (ripgrep syntax, smart case)" }),
 		path: Type.Optional(Type.String({ description: "Directory to search (default: current dir)" })),
@@ -182,8 +183,9 @@ const diffHunksTool = defineTool({
 	name: "diff-hunks",
 	label: "Diff hunks",
 	description:
-		"Return the current git diff hunks (working tree by default, staged index if staged=true) with N context lines, instead of reading whole files. Use when iterating on changes — costs only the diff size.",
+		"Return the current git diff hunks (working tree by default, staged index if staged=true) with N context lines. Use when reviewing or iterating on changes — costs only the diff size, not whole-file reads.",
 	promptSnippet: "diff-hunks: current git diff hunks only (working tree or staged)",
+	promptGuidelines: ["When reviewing or iterating on uncommitted changes, use diff-hunks to see only the hunks instead of raw git diff or full-file reads."],
 	parameters: Type.Object({
 		staged: Type.Optional(Type.Boolean({ description: "Diff the staged index instead of the working tree", default: false })),
 		context: Type.Optional(Type.Number({ description: "Context lines per hunk (default 3)", default: 3 })),
@@ -211,8 +213,9 @@ const cmdCacheTool = defineTool({
 	name: "cmd-cache",
 	label: "Cached command",
 	description:
-		"Run a READ-ONLY shell command, memoizing the result for 15s per command+cwd. Repeated calls (git status, ls, checks) return the cached output flagged [cached] instead of re-executing. Pass force=true to bypass. Only use for read-only commands.",
+		"Run a READ-ONLY shell command, memoizing the result for 15s per command+cwd. Repeated calls (git status, ls, checks) return the cached output flagged [cached] instead of re-executing. Use when a read-only command may have just been run and the result is still fresh. Pass force=true to bypass. Only use for read-only commands.",
 	promptSnippet: "cmd-cache: memoized read-only shell command (15s)",
+	promptGuidelines: ["To re-run a just-executed read-only command (git status, ls, checks), use cmd-cache so the fresh result is reused instead of re-executing in bash."],
 	parameters: Type.Object({
 		command: Type.String({ description: "Read-only shell command to run" }),
 		force: Type.Optional(Type.Boolean({ description: "Bypass cache and re-run", default: false })),
@@ -370,8 +373,9 @@ const codeIndexTool = defineTool({
 	name: "code-index",
 	label: "Code index",
 	description:
-		"Per-project symbol index (functions/classes/interfaces/types/enums/consts → file:line), cached on disk and rebuilt when the repo changes. query filters by name substring. Use to locate definitions in ~1KB instead of full-file reads. Pass force=true to rebuild.",
+		"Find where a symbol (function/class/interface/type/enum/const) is defined: returns name → file:line from a cached per-project index, rebuilt when the repo changes. query filters by name substring. Use when locating definitions instead of full-file reads. Pass force=true to rebuild.",
 	promptSnippet: "code-index: symbol map (name → file:line), rebuilt on change",
+	promptGuidelines: ["When you need to find where a symbol (function/class/type/const) is defined, use code-index (or snippet) instead of full-file reads."],
 	parameters: Type.Object({
 		query: Type.Optional(Type.String({ description: "Substring to filter symbol names (empty = summary only)" })),
 		maxResults: Type.Optional(Type.Number({ description: "Max symbols returned (default 30)", default: 30 })),
@@ -450,6 +454,7 @@ const checkTool = defineTool({
 	description:
 		"Run tsc --noEmit and/or eslint, returning ONLY distilled unique errors as file:line:col CODE message, capped at maxErrors. Use instead of raw build output for cheap feedback before finishing a task. Reports 'not found' gracefully in non-JS/TS repos.",
 	promptSnippet: "check: distilled tsc/eslint errors (unique, capped)",
+	promptGuidelines: ["When finishing or debugging TypeScript/JS tasks, use check for distilled tsc/eslint errors instead of raw build output."],
 	parameters: Type.Object({
 		scope: Type.Optional(Type.String({ description: "Which checker to run", default: "tsc", enum: ["tsc", "eslint", "all"] })),
 		maxErrors: Type.Optional(Type.Number({ description: "Max unique errors returned (default 15)", default: 15 })),
@@ -497,6 +502,7 @@ const filesChangedTool = defineTool({
 	description:
 		"One-call snapshot of repo state: branch, git status --short, and diff --stat for staged + unstaged changes. Cheaper than 2-3 separate bash git calls.",
 	promptSnippet: "files-changed: branch + git status + diff --stat in one call",
+	promptGuidelines: ["To check what changed in the repo (branch, status, diff stat), use files-changed in one call instead of separate git commands."],
 	parameters: Type.Object({}),
 	async execute(_id, _p, _sig, _onUpdate, ctx) {
 		const root = gitRoot(ctx.cwd);
