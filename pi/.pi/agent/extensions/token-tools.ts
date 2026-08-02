@@ -1,14 +1,13 @@
 /**
  * Token-Saving Tool Suite
  *
- * Six custom tools that cut the biggest token sinks in the agent loop:
+ * Five custom tools that cut the biggest token sinks in the agent loop:
  * search floods, whole-file reads, redundant bash, and raw build output.
  *
  *   snippet       - rg-based compact code search (capped, match-centered)
  *   diff-hunks    - current git diff hunks only (working tree / staged)
- *   cmd-cache     - memoizes read-only shell commands (15s, same cwd)
  *   code-index    - persistent per-project symbol map (name -> file:line)
- *   check         - tsc/eslint output distilled to unique file:line errors
+ *   check         - tsc/eslint output distilled to unique file:line errors (TS/JS repos only)
  *   files-changed - branch + git status --short + diff --stat in one call
  *
  * Install: copy to ~/.pi/agent/extensions/token-tools.ts, then /reload.
@@ -118,6 +117,16 @@ function gitRoot(cwd: string): string | null {
 	}
 }
 
+const TS_JS_MARKERS = ["package.json", "tsconfig.json", "tsconfig.app.json", "tsconfig.node.json", "jsconfig.json"];
+
+/** True if cwd or its git root looks like a TypeScript/JavaScript project. */
+function isTsJsProject(cwd: string): boolean {
+	for (const dir of new Set([cwd, gitRoot(cwd)].filter((d): d is string => !!d))) {
+		if (TS_JS_MARKERS.some((m) => fs.existsSync(path.join(dir, m)))) return true;
+	}
+	return false;
+}
+
 function textResult(text: string) {
 	return { content: [{ type: "text" as const, text }], details: {} };
 }
@@ -204,36 +213,7 @@ const diffHunksTool = defineTool({
 	},
 });
 
-// ── 3. cmd-cache ────────────────────────────────────────────────────────
-
-const CACHE_MS = 15_000;
-const cmdCache = new Map<string, { out: string; ts: number }>();
-
-const cmdCacheTool = defineTool({
-	name: "cmd-cache",
-	label: "Cached command",
-	description:
-		"Run a READ-ONLY shell command, memoizing the result for 15s per command+cwd. Repeated calls (git status, ls, checks) return the cached output flagged [cached] instead of re-executing. Use when a read-only command may have just been run and the result is still fresh. Pass force=true to bypass. Only use for read-only commands.",
-	promptSnippet: "cmd-cache: memoized read-only shell command (15s)",
-	promptGuidelines: ["To re-run a just-executed read-only command (git status, ls, checks), use cmd-cache so the fresh result is reused instead of re-executing in bash."],
-	parameters: Type.Object({
-		command: Type.String({ description: "Read-only shell command to run" }),
-		force: Type.Optional(Type.Boolean({ description: "Bypass cache and re-run", default: false })),
-	}),
-	async execute(_id, params, _sig, _onUpdate, ctx) {
-		const key = `${ctx.cwd}\u0000${params.command}`;
-		const hit = cmdCache.get(key);
-		if (hit && !params.force && Date.now() - hit.ts < CACHE_MS) {
-			const age = Math.round((Date.now() - hit.ts) / 1000);
-			return textResult(`[cached ${age}s old — pass force:true to re-run]\n${hit.out}`);
-		}
-		const out = run(params.command, ctx.cwd, 20_000);
-		cmdCache.set(key, { out, ts: Date.now() });
-		return textResult(out);
-	},
-});
-
-// ── 4. code-index ───────────────────────────────────────────────────────
+// ── 3. code-index ───────────────────────────────────────────────────────
 
 interface IndexEntry {
 	name: string;
@@ -399,7 +379,7 @@ const codeIndexTool = defineTool({
 	},
 });
 
-// ── 5. check ────────────────────────────────────────────────────────────
+// ── 4. check ────────────────────────────────────────────────────────────
 
 function findBin(cwd: string, name: string): string | null {
 	const local = path.join(cwd, "node_modules", ".bin", name);
@@ -494,7 +474,7 @@ const checkTool = defineTool({
 	},
 });
 
-// ── 6. files-changed ────────────────────────────────────────────────────
+// ── 5. files-changed ────────────────────────────────────────────────────
 
 const filesChangedTool = defineTool({
 	name: "files-changed",
@@ -519,8 +499,11 @@ const filesChangedTool = defineTool({
 export default function (pi: ExtensionAPI) {
 	pi.registerTool(snippetTool);
 	pi.registerTool(diffHunksTool);
-	pi.registerTool(cmdCacheTool);
 	pi.registerTool(codeIndexTool);
-	pi.registerTool(checkTool);
 	pi.registerTool(filesChangedTool);
+
+	// `check` only earns prompt space in TypeScript/JavaScript projects.
+	pi.on("session_start", (_event, ctx) => {
+		if (isTsJsProject(ctx.cwd)) pi.registerTool(checkTool);
+	});
 }
