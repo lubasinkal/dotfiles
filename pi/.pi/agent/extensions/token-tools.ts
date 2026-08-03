@@ -14,11 +14,12 @@
  * Depends on: ripgrep (`rg`) on PATH; git for git-based tools.
  */
 
-import { execSync, spawn } from "node:child_process";
+import { execSync, spawn, type ChildProcessByStdio } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { createHash } from "node:crypto";
 import * as os from "node:os";
+import type { Readable } from "node:stream";
 import { Type } from "@earendil-works/pi-ai";
 import { defineTool, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
@@ -78,17 +79,19 @@ function runAsync(cmd: string, args: string[], cwd: string, timeoutMs: number): 
 	return new Promise((resolve) => {
 		let out = "";
 		let settled = false;
+		let timer: ReturnType<typeof setTimeout>;
+		let child: ChildProcessByStdio<null, Readable, Readable>;
 		const finish = (code: number, extra = "") => {
 			if (settled) return;
 			settled = true;
 			clearTimeout(timer);
 			resolve({ code, out: out + extra });
 		};
-		const timer = setTimeout(() => {
+		timer = setTimeout(() => {
 			child.kill("SIGKILL");
 			finish(-9, "\n[timed out]");
 		}, timeoutMs);
-		const child = spawn(cmd, args, { cwd, stdio: ["ignore", "pipe", "pipe"] });
+		child = spawn(cmd, args, { cwd, stdio: ["ignore", "pipe", "pipe"] });
 		child.stdout.on("data", (d: Buffer) => {
 			out += d.toString();
 			if (out.length > 8_000_000) {
@@ -280,7 +283,18 @@ function deriveKind(text: string): string {
 	return "const";
 }
 
+const GIT_HASH_CACHE_TTL_MS = 2_000;
+const gitHashCache = new Map<string, { at: number; hash: string }>();
+
 function projectGitHash(root: string): string {
+	const cached = gitHashCache.get(root);
+	if (cached && Date.now() - cached.at < GIT_HASH_CACHE_TTL_MS) return cached.hash;
+	const hash = computeProjectGitHash(root);
+	gitHashCache.set(root, { at: Date.now(), hash });
+	return hash;
+}
+
+function computeProjectGitHash(root: string): string {
 	try {
 		const head = execSync("git rev-parse HEAD 2>/dev/null", { cwd: root, encoding: "utf8", timeout: 5000 }).trim();
 		const dirty = execSync("git status --porcelain | sha256sum", { cwd: root, encoding: "utf8", timeout: 5000 }).trim().split(/\s+/)[0];
@@ -421,7 +435,7 @@ function parseEslint(out: string): { errors: string[]; rawCount: number } {
 		const m = re.exec(line);
 		if (!m) continue;
 		rawCount++;
-		const key = `${m[1]}:${m[2]}:${m[4]}`;
+		const key = `${m[1]}:${m[2]}:${m[3]}:${m[4]}:${m[6] ?? ""}:${m[5].trim()}`;
 		if (seen.has(key)) continue;
 		seen.add(key);
 		errors.push(`${m[1]}:${m[2]}:${m[3]} ${m[4]}${m[5] ? ` (${m[5]})` : ""}`);
@@ -453,9 +467,11 @@ const checkTool = defineTool({
 				const t0 = Date.now();
 				const { code, out } = await runAsync(bin, ["--noEmit"], ctx.cwd, 120_000);
 				const { errors, rawCount } = parseTsc(out);
-				const clean = code === 0 || errors.length === 0;
-				const head = `tsc: ${clean ? "clean ✓" : `${errors.length} unique error(s) (raw ${rawCount})`} · ${((Date.now() - t0) / 1000).toFixed(1)}s`;
-				parts.push(head + (clean ? "" : `\n${errors.slice(0, maxErrors).join("\n")}` + (errors.length > maxErrors ? `\n… +${errors.length - maxErrors} more` : "")));
+				const clean = code === 0 && errors.length === 0;
+				const crashed = code !== 0 && errors.length === 0;
+				const head = `tsc: ${clean ? "clean ✓" : crashed ? `exited ${code} (output not parsed)` : `${errors.length} unique error(s) (raw ${rawCount})`} · ${((Date.now() - t0) / 1000).toFixed(1)}s`;
+				const body = clean ? "" : crashed ? `\n${out.slice(0, 2000)}` : `\n${errors.slice(0, maxErrors).join("\n")}` + (errors.length > maxErrors ? `\n… +${errors.length - maxErrors} more` : "");
+				parts.push(head + body);
 			}
 		}
 
@@ -464,11 +480,13 @@ const checkTool = defineTool({
 			if (!bin) parts.push("eslint: not found");
 			else {
 				const t0 = Date.now();
-				const { out } = await runAsync(bin, [".", "--format", "compact"], ctx.cwd, 120_000);
+				const { code, out } = await runAsync(bin, [".", "--format", "compact"], ctx.cwd, 120_000);
 				const { errors, rawCount } = parseEslint(out);
-				const clean = errors.length === 0;
-				const head = `eslint: ${clean ? "clean ✓" : `${errors.length} unique problem(s) (raw ${rawCount})`} · ${((Date.now() - t0) / 1000).toFixed(1)}s`;
-				parts.push(head + (clean ? "" : `\n${errors.slice(0, maxErrors).join("\n")}` + (errors.length > maxErrors ? `\n… +${errors.length - maxErrors} more` : "")));
+				const clean = code === 0 && errors.length === 0;
+				const crashed = code !== 0 && errors.length === 0;
+				const head = `eslint: ${clean ? "clean ✓" : crashed ? `exited ${code} (output not parsed)` : `${errors.length} unique problem(s) (raw ${rawCount})`} · ${((Date.now() - t0) / 1000).toFixed(1)}s`;
+				const body = clean ? "" : crashed ? `\n${out.slice(0, 2000)}` : `\n${errors.slice(0, maxErrors).join("\n")}` + (errors.length > maxErrors ? `\n… +${errors.length - maxErrors} more` : "");
+				parts.push(head + body);
 			}
 		}
 
