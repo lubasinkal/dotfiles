@@ -10,6 +10,11 @@
  *   check         - tsc/eslint output distilled to unique file:line errors (TS/JS repos only)
  *   files-changed - branch + git status --short + diff --stat in one call
  *
+ * Routing: discovery → snippet · location → code-index · review → diff-hunks
+ *          state → files-changed · build → check
+ * Direct tools (read/bash/write) are reserved for semantic judgment, full-file
+ * context, and approval-sensitive actions, per each tool's guidelines.
+ *
  * Install: copy to ~/.pi/agent/extensions/token-tools.ts, then /reload.
  * Depends on: ripgrep (`rg`) on PATH; git for git-based tools.
  */
@@ -154,8 +159,14 @@ const snippetTool = defineTool({
 	label: "Snippet search",
 	description:
 		"Search code with ripgrep. Returns total match count plus one compact match-centered line per hit (file:line: text), capped at maxResults. query is a ripgrep regex (smart case by default).",
-	promptSnippet: "snippet: rg-powered compact code search (capped one-liners)",
-	promptGuidelines: ["Use snippet for all code search instead of bash grep/rg pipelines."],
+	promptSnippet: "snippet: code search — discovery, references, patterns (capped match-centered lines)",
+	promptGuidelines: [
+		"Use snippet for code discovery: unknown symbols, references, usage patterns, config keys — anywhere you'd reach for bash grep/rg pipelines.",
+		"If you know the symbol name and only need its definition, prefer code-index (name → file:line).",
+		"Treat hits as anchors: follow up with read only when the match line isn't enough to answer the question.",
+		"Stop once you have enough file:line anchors; don't re-run variants of the same query.",
+		"Narrow with path= and maxResults= instead of post-filtering large result sets.",
+	],
 	parameters: Type.Object({
 		query: Type.String({ description: "Regex or substring to search (ripgrep syntax, smart case)" }),
 		path: Type.Optional(Type.String({ description: "Directory to search (default: current dir)" })),
@@ -198,8 +209,14 @@ const diffHunksTool = defineTool({
 	label: "Diff hunks",
 	description:
 		"Return current git diff hunks (working tree or staged) with N context lines.",
-	promptSnippet: "diff-hunks: current git diff hunks only (working tree or staged)",
-	promptGuidelines: ["Use diff-hunks to review uncommitted changes instead of raw git diff or full-file reads."],
+	promptSnippet: "diff-hunks: uncommitted changes as hunks (working tree / staged, N context lines)",
+	promptGuidelines: [
+		"Use diff-hunks to review uncommitted changes instead of raw git diff or full-file reads.",
+		"Snapshot first with files-changed, then request hunks only for the changed paths via paths=.",
+		"staged=true for the staged index; default covers the working tree.",
+		"Stop when hunks cover all changed paths; escalate to read only when you need context beyond the hunk window.",
+		"Review-only tool: use direct tools (edit/write) for the actual change.",
+	],
 	parameters: Type.Object({
 		staged: Type.Optional(Type.Boolean({ description: "Diff the staged index instead of the working tree", default: false })),
 		context: Type.Optional(Type.Number({ description: "Context lines per hunk (default 3)", default: 3 })),
@@ -371,7 +388,13 @@ const codeIndexTool = defineTool({
 	description:
 		"Find where a symbol is defined: name → file:line from a cached per-project index (rebuilt on change).",
 	promptSnippet: "code-index: symbol map (name → file:line), rebuilt on change",
-	promptGuidelines: ["Use code-index (or snippet) to locate symbol definitions instead of full-file reads."],
+	promptGuidelines: [
+		"Use code-index when you know (or partially know) a symbol name and need its definition location.",
+		"Empty query returns a per-kind summary — use it to orient in an unfamiliar repo.",
+		"Name-based only: use snippet for content search (strings, patterns, references).",
+		"If the index looks stale, pass force=true to rebuild once; retry a stale hit before reading the whole file.",
+		"Stop after extracting file:line anchors; read the file directly only when the definition line isn't enough.",
+	],
 	parameters: Type.Object({
 		query: Type.Optional(Type.String({ description: "Substring to filter symbol names (empty = summary only)" })),
 		maxResults: Type.Optional(Type.Number({ description: "Max symbols returned (default 30)", default: 30 })),
@@ -449,8 +472,14 @@ const checkTool = defineTool({
 	label: "Check code",
 	description:
 		"Run tsc/eslint and return only distilled unique errors (file:line:col CODE), capped.",
-	promptSnippet: "check: distilled tsc/eslint errors (unique, capped)",
-	promptGuidelines: ["Use check for distilled tsc/eslint errors instead of raw build output."],
+	promptSnippet: "check: distilled tsc/eslint errors (unique file:line:col CODE), capped",
+	promptGuidelines: [
+		"Use check after edits in TS/JS projects to verify the build instead of running raw tsc/eslint.",
+		"Fix errors in dependency order — earlier errors often cause later ones.",
+		"If check reports 'exited N (output not parsed)', run the raw checker once to see config/crash output.",
+		"Stop when check reports clean ✓; don't re-run the same scope repeatedly.",
+		"scope='all' runs both checkers; 'eslint' for lint-only.",
+	],
 	parameters: Type.Object({
 		scope: Type.Optional(Type.String({ description: "Which checker to run", default: "tsc", enum: ["tsc", "eslint", "all"] })),
 		maxErrors: Type.Optional(Type.Number({ description: "Max unique errors returned (default 15)", default: 15 })),
@@ -501,8 +530,13 @@ const filesChangedTool = defineTool({
 	label: "Files changed",
 	description:
 		"One-call repo snapshot: branch, git status --short, diff --stat (staged + unstaged).",
-	promptSnippet: "files-changed: branch + git status + diff --stat in one call",
-	promptGuidelines: ["Use files-changed to check repo state instead of separate git commands."],
+	promptSnippet: "files-changed: repo snapshot (branch, status --short, diff --stat) in one call",
+	promptGuidelines: [
+		"Use files-changed to check repo state instead of separate git commands (status, branch, diff --stat).",
+		"Use it at task start and before commits to confirm scope.",
+		"For actual hunks, follow up with diff-hunks (paths= to limit scope).",
+		"Stop at the snapshot unless you need hunks or file contents.",
+	],
 	parameters: Type.Object({}),
 	async execute(_id, _p, _sig, _onUpdate, ctx) {
 		const root = gitRoot(ctx.cwd);
