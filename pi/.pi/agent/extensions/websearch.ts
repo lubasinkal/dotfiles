@@ -12,7 +12,7 @@
  *   4. Hacker News Algolia + DuckDuckGo Instant Answer as keyless fallback
  *
  * Install: copy to ~/.pi/agent/extensions/ (auto-loaded) or .pi/extensions/
- *          for project scope, or `pi -e ./web-search.ts` for a quick test.
+ *          for project scope, or `pi -e ./websearch.ts` for a quick test.
  */
 
 import { Type } from "typebox";
@@ -208,14 +208,11 @@ export default function webSearchExtension(pi: ExtensionAPI) {
     name: "websearch",
     label: "Web Search",
     description:
-      "Search the web (mode='search') or fetch a URL's text content (mode='fetch'). " +
-      "Search uses Tavily/Brave if TAVILY_API_KEY/BRAVE_API_KEY are set, else keyless SearXNG/HN/DDG backends. " +
-      "Output is truncated to ~12KB; fetch a page for full detail.",
+      "Search the web (mode='search') or fetch a page's text (mode='fetch'). Output truncated to ~12KB.",
     promptSnippet: "Search the web or fetch a page's text content",
     promptGuidelines: [
-      "Use websearch with mode=\"search\" when you need current or external information not in the repo or training data.",
-      "Use websearch with mode=\"fetch\" and the URL as query to read a specific page's text.",
-      "Prefer websearch over guessing URLs: it returns canonical links with snippets.",
+      "Use websearch when you need current or external info not in the repo.",
+      "Prefer websearch over guessing URLs — it returns canonical links with snippets.",
     ],
     parameters: Type.Object({
       mode: Type.Optional(
