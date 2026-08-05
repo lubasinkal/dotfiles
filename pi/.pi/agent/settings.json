@@ -1,14 +1,15 @@
 {
-  "lastChangelogVersion": "0.83.0",
-  "theme": "dark",
-  "defaultProvider": "opencode",
-  "defaultModel": "deepseek-v4-flash-free",
+  "defaultModel": "mimo-v2.5",
+  "defaultProvider": "opencode-go",
   "defaultThinkingLevel": "high",
-  "packages": [
-    "npm:pi-hermes-memory"
-  ],
   "hideThinkingBlock": true,
+  "lastChangelogVersion": "0.83.0",
+  "packages": [
+    "npm:pi-hermes-memory",
+    "npm:@ollama/pi-web-search"
+  ],
   "terminal": {
     "showTerminalProgress": true
-  }
+  },
+  "theme": "dark"
 }
