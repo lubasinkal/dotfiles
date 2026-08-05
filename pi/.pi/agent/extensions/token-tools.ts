@@ -20,12 +20,12 @@
  */
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { isTsJsProject } from "./shared.js";
-import { snippetTool } from "./snippet.js";
-import { diffHunksTool } from "./diff-hunks.js";
-import { codeIndexTool } from "./code-index.js";
-import { checkTool } from "./check.js";
-import { filesChangedTool } from "./files-changed.js";
+import { isTsJsProject } from "../lib/shared.js";
+import { snippetTool } from "../lib/snippet.js";
+import { diffHunksTool } from "../lib/diff-hunks.js";
+import { codeIndexTool } from "../lib/code-index.js";
+import { checkTool } from "../lib/check.js";
+import { filesChangedTool } from "../lib/files-changed.js";
 
 export default function init(pi: ExtensionAPI) {
 	pi.registerTool(snippetTool);

@@ -46,4 +46,3 @@ export const filesChangedTool = defineTool({
 
 // No-op default so Pi's auto-discovery doesn't reject this module.
 export default function() {}
-
