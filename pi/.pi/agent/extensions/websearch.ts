@@ -15,7 +15,7 @@
  *          for project scope, or `pi -e ./websearch.ts` for a quick test.
  */
 
-import { Type } from "typebox";
+import { Type } from "@earendil-works/pi-ai";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 const UA =
