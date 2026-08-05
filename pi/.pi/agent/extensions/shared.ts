@@ -145,3 +145,7 @@ export function isTsJsProject(cwd: string): boolean {
 	}
 	return false;
 }
+
+// No-op default so Pi's auto-discovery doesn't reject this module.
+export default function() {}
+

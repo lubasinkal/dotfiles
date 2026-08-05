@@ -43,3 +43,7 @@ export const filesChangedTool = defineTool({
 		return textResult(parts.join(""));
 	},
 });
+
+// No-op default so Pi's auto-discovery doesn't reject this module.
+export default function() {}
+

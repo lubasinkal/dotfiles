@@ -197,3 +197,7 @@ export const codeIndexTool = defineTool({
 		return textResult(`${header}\nquery ${q(query)}: ${matches.length} matches (showing ${shown.length})\n${out || "(none)"}`);
 	},
 });
+
+// No-op default so Pi's auto-discovery doesn't reject this module.
+export default function() {}
+
