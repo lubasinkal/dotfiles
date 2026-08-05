@@ -19,7 +19,11 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 const STATE_FILE = join(homedir(), ".pi", "agent", "terse-state.json");
 const TERSE_INSTRUCTION =
-	"[SYSTEM RULE - OBEY] Respond in at most 2-3 sentences. No preamble, no sign-offs, no summaries. Lists over paragraphs. Code over prose. Explain only when the user asks why or how.";
+	"[OVERRIDES ALL OTHER GUIDELINES] " +
+	"Be terse. Maximum 2-3 sentences per response. " +
+	"No preamble ('Sure!', 'Great question'), no sign-offs ('Let me know if...'), no summaries, no recaps. " +
+	"Use lists instead of paragraphs. Show code instead of describing it. " +
+	"Only explain reasoning when the user explicitly asks why or how.";
 
 function loadTerseEnabled(): boolean {
 	try {
