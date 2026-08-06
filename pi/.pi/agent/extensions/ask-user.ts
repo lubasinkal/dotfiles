@@ -2,7 +2,7 @@
  * ask_user — Lets the model ask the user a single multiple-choice question.
  *
  * - 2 to 5 model-provided options, plus an always-present "Write my own answer…"
- * - Arrow keys or number keys to pick, Enter to confirm
+ * - Arrow keys (↑↓) or j/k to navigate, Enter to confirm
  * - "Write my own answer…" opens an inline editor (Esc returns to options)
  * - Esc on the options dismisses the question
  *
@@ -67,7 +67,7 @@ function buildResultMessage(
     | { kind: "cancelled" }
     | { kind: "dismissed" }
     | { kind: "custom"; answer: string }
-    | { kind: "selected"; answer: string; index: number | undefined },
+    | { kind: "selected"; answer: string; index: number },
 ) {
   switch (outcome.kind) {
     case "no-ui":
@@ -153,166 +153,184 @@ export default function askUser(pi: ExtensionAPI) {
       } | null>((tui, theme, _kb, done) => {
         let optionIndex = 0;
         let editMode = false;
-        let settled = false;
-        const uiSignal = new AbortController();
+        let cachedLines: string[] | undefined;
 
-        function finish(value: {
-          answer: string;
-          wasCustom: boolean;
-          index?: number;
-        } | null) {
-          if (settled) return;
-          settled = true;
-          uiSignal.abort();
-          done(value);
+        const editorTheme: EditorTheme = {
+          borderColor: (s: string) => theme.fg("accent", s),
+          selectList: {
+            selectedPrefix: (t: string) => theme.fg("accent", t),
+            selectedText: (t: string) => theme.fg("accent", t),
+            description: (t: string) => theme.fg("muted", t),
+            scrollInfo: (t: string) => theme.fg("dim", t),
+            noMatch: (t: string) => theme.fg("warning", t),
+          },
+        };
+        const editor = new Editor(tui, editorTheme);
+
+        editor.onSubmit = (value: string) => {
+          const trimmed = value.trim();
+          if (trimmed) {
+            done({ answer: trimmed, wasCustom: true });
+          } else {
+            editMode = false;
+            editor.setText("");
+            refresh();
+          }
+        };
+
+        function refresh() {
+          cachedLines = undefined;
+          tui.requestRender();
         }
 
-        const cancel = () => finish(null);
-        signal?.addEventListener("abort", cancel, { once: true });
-
-        let editor: Editor | undefined;
-        let optionsContainer: { remove: () => void } | undefined;
-
-        const q = params.question;
-        const wrappedQuestion = wrapTextWithAnsi(
-          theme.fg("accent", q),
-          tui.width - 4,
-        );
-
-        function showOptions() {
-          editMode = false;
-          editor?.remove();
-          editor = undefined;
-
-          const comp = tui.addChild(
-            new (class {
-              remove() {
-                tui.removeChild(this as any);
-              }
-              render() {
-                let out = "";
-                out += wrappedQuestion.join("\n") + "\n\n";
-                for (let i = 0; i < allOptions.length; i++) {
-                  const opt = allOptions[i]!;
-                  const isSelected = i === optionIndex;
-                  const prefix = isSelected
-                    ? theme.fg("accent", "▶")
-                    : " ";
-                  const num = theme.fg("dim", `${i + 1}.`);
-                  const label = isSelected
-                    ? theme.fg("accent", theme.bold(opt.label))
-                    : theme.fg("muted", opt.label);
-
-                  out += `${prefix} ${num} ${label}`;
-                  if (opt.description) {
-                    out += `\n    ${theme.fg("dim", opt.description)}`;
-                  }
-                  if (opt.isOther && isSelected) {
-                    out += `\n    ${theme.fg("dim", "(press Enter to type your own answer)")}`;
-                  }
-                  out += "\n";
-                }
-                out += `\n${theme.fg("dim", "↑↓ or 1-" + allOptions.length + " to pick · Enter to confirm · Esc to dismiss")}`;
-                return new Text(out, 0, 0);
-              }
-            })(),
-          );
-          const remove = () => tui.removeChild(comp as any);
-          optionsContainer = { remove };
-        }
-
-        function showEditor() {
-          editMode = true;
-          optionsContainer?.remove();
-          optionsContainer = undefined;
-
-          editor = new Editor(tui, theme as EditorTheme);
-          editor.placeholder = theme.fg(
-            "dim",
-            "Type your answer, then press Enter… (Esc to go back)",
-          );
-
-          tui.addChild(editor);
-          tui.setFocus(editor);
-
-          editor.onSubmit = (text: string) => {
-            const trimmed = text.trim();
-            if (trimmed) {
-              finish({ answer: trimmed, wasCustom: true });
-            }
-          };
-        }
-
-        showOptions();
-
-        tui.addInputListener((data: Uint8Array) => {
-          if (settled) return;
-
+        function handleInput(data: Uint8Array) {
           if (editMode) {
             if (matchesKey(data, Key.Escape)) {
-              showOptions();
-              tui.requestRender();
+              editMode = false;
+              editor.setText("");
+              refresh();
+              return;
+            }
+            editor.handleInput(data);
+            refresh();
+            return;
+          }
+
+          if (matchesKey(data, Key.ArrowUp) || matchesKey(data, "k")) {
+            optionIndex = Math.max(0, optionIndex - 1);
+            refresh();
+            return;
+          }
+          if (matchesKey(data, Key.ArrowDown) || matchesKey(data, "j")) {
+            optionIndex = Math.min(allOptions.length - 1, optionIndex + 1);
+            refresh();
+            return;
+          }
+
+          if (matchesKey(data, Key.Enter)) {
+            const selected = allOptions[optionIndex];
+            if (selected?.isOther) {
+              editMode = true;
+              refresh();
+            } else if (selected) {
+              done({
+                answer: selected.label,
+                wasCustom: false,
+                index: optionIndex + 1,
+              });
             }
             return;
           }
 
           if (matchesKey(data, Key.Escape)) {
-            finish(null);
-            return;
+            done(null);
           }
-          if (matchesKey(data, Key.Enter)) {
-            const opt = allOptions[optionIndex];
-            if (opt?.isOther) {
-              showEditor();
-              tui.requestRender();
-            } else if (opt) {
-              finish({
-                answer: opt.label,
-                wasCustom: false,
-                index: optionIndex,
-              });
-            }
-            return;
-          }
-          if (matchesKey(data, Key.ArrowUp) || matchesKey(data, "k")) {
-            optionIndex =
-              (optionIndex - 1 + allOptions.length) % allOptions.length;
-            tui.requestRender();
-            return;
-          }
-          if (matchesKey(data, Key.ArrowDown) || matchesKey(data, "j")) {
-            optionIndex = (optionIndex + 1) % allOptions.length;
-            tui.requestRender();
-            return;
+        }
+
+        function render(width: number): string[] {
+          if (cachedLines) return cachedLines;
+
+          const lines: string[] = [];
+          const renderWidth = Math.max(1, width);
+
+          function addWrapped(text: string) {
+            lines.push(...wrapTextWithAnsi(text, renderWidth));
           }
 
-          // Number keys 1-9 for direct selection
-          const str = new TextDecoder().decode(data);
-          const num = parseInt(str, 10);
-          if (num >= 1 && num <= allOptions.length) {
-            const opt = allOptions[num - 1]!;
-            if (opt.isOther) {
-              showEditor();
-              tui.requestRender();
-            } else {
-              finish({
-                answer: opt.label,
-                wasCustom: false,
-                index: num - 1,
-              });
+          function addWrappedWithPrefix(prefix: string, text: string) {
+            const prefixWidth = visibleWidth(prefix);
+            if (prefixWidth >= renderWidth) {
+              addWrapped(prefix + text);
+              return;
+            }
+            const wrapped = wrapTextWithAnsi(
+              text,
+              renderWidth - prefixWidth,
+            );
+            const continuationPrefix = " ".repeat(prefixWidth);
+            for (let i = 0; i < wrapped.length; i++) {
+              lines.push(
+                `${i === 0 ? prefix : continuationPrefix}${wrapped[i]}`,
+              );
             }
           }
-        });
 
-        // Cleanup on external finish
-        uiSignal.signal.addEventListener(
-          "abort",
-          () => {
-            editor?.remove();
-            optionsContainer?.remove();
+          lines.push(theme.fg("accent", "─".repeat(renderWidth)));
+          addWrappedWithPrefix(
+            " ",
+            theme.fg("text", params.question),
+          );
+          lines.push("");
+
+          for (let i = 0; i < allOptions.length; i++) {
+            const opt = allOptions[i]!;
+            const selected = i === optionIndex;
+            const isOther = opt.isOther === true;
+            const num = `${i + 1}.`;
+            const label = `${num} ${opt.label}${isOther && editMode ? " ✎" : ""}`;
+            const color =
+              selected || (isOther && editMode) ? "accent" : "text";
+
+            const prefix = selected
+              ? theme.fg("accent", "▶ ")
+              : "  ";
+            addWrappedWithPrefix(prefix, theme.fg(color, label));
+
+            if (isOther && selected && !editMode) {
+              addWrappedWithPrefix(
+                "     ",
+                theme.fg("dim", "(press Enter to type your own answer)"),
+              );
+            }
+            if (opt.description) {
+              addWrappedWithPrefix(
+                "     ",
+                theme.fg("muted", opt.description),
+              );
+            }
+          }
+
+          if (editMode) {
+            lines.push("");
+            addWrappedWithPrefix(
+              " ",
+              theme.fg("muted", "Your answer:"),
+            );
+            for (const line of editor.render(
+              Math.max(1, renderWidth - 2),
+            )) {
+              lines.push(` ${line}`);
+            }
+          }
+
+          lines.push("");
+          if (editMode) {
+            addWrappedWithPrefix(
+              " ",
+              theme.fg("dim", "Enter to submit · Esc to go back"),
+            );
+          } else {
+            addWrappedWithPrefix(
+              " ",
+              theme.fg(
+                "dim",
+                "↑↓/jk navigate · Enter to select · Esc to dismiss",
+              ),
+            );
+          }
+          lines.push(theme.fg("accent", "─".repeat(renderWidth)));
+
+          cachedLines = lines;
+          return lines;
+        }
+
+        return {
+          render,
+          handleInput,
+          invalidate: () => {
+            cachedLines = undefined;
           },
-          { once: true },
-        );
+        };
       });
 
       if (!result) {
@@ -343,7 +361,7 @@ export default function askUser(pi: ExtensionAPI) {
                 : {
                     kind: "selected",
                     answer: result.answer,
-                    index: result.index,
+                    index: result.index ?? -1,
                   },
             ),
           },
