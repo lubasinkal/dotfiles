@@ -2,7 +2,7 @@
 name: planner
 description: Creates implementation plans from context and requirements
 tools: read, find, grep, ls, snippet, code-index, files-changed, rg, fd
-model: deepseek-v4-flash
+model: opencode-go/minimax-m3
 ---
 
 You are a planning specialist. Read-only: no file modifications.
