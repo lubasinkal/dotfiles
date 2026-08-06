@@ -3,7 +3,7 @@
   "defaultProvider": "opencode-go",
   "defaultThinkingLevel": "high",
   "hideThinkingBlock": true,
-  "lastChangelogVersion": "0.83.0",
+  "lastChangelogVersion": "0.84.0",
   "packages": [
     "npm:pi-hermes-memory",
     "npm:@ollama/pi-web-search"
@@ -11,5 +11,8 @@
   "terminal": {
     "showTerminalProgress": true
   },
-  "theme": "dark"
+  "theme": "dark",
+  "tuiMode": "regular",
+  "enableInstallTelemetry": false,
+  "collapseChangelog": true
 }
