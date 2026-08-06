@@ -1,7 +1,7 @@
 ---
 name: planner
 description: Creates implementation plans from context and requirements
-tools: read, grep, find, ls, websearch
+tools: read, fd, rg, snippet, code-index, diff-hunks, files-changed, websearch
 model: minimax-m3
 ---
 

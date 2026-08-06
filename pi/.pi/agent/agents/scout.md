@@ -1,7 +1,7 @@
 ---
 name: scout
 description: Fast codebase recon that returns compressed context for handoff to other agents
-tools: read, grep, find, ls, bash
+tools: read, fd, rg, snippet, bash, files-changed
 model: deepseek-v4-flash
 ---
 
