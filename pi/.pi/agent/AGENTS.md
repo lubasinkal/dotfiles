@@ -7,8 +7,25 @@
 - **Scope precisely** — Point to exact files/functions/lines, not open-ended searches.
 - **Compress output** — Pipe bash output through filters; use `--porcelain`, `-o name`, `--stat`.
 - **Read structure first** — Use `code-index` to find symbols before reading files.
-- **Use subagents** — Delegate research to subagents to keep main context lean.
 - **Commit often** — Checkpoints let you restart clean when context fills.
+
+## Subagent Usage
+
+**Always use subagents for:**
+- Multi-file research (understanding a codebase, finding patterns)
+- Web research (looking up docs, APIs, examples)
+- Code review (checking changes for issues)
+- Planning before implementation (creating step-by-step plans)
+- Parallel tasks (multiple independent investigations)
+
+**Agents available:**
+- `scout` — Fast codebase recon, returns compressed context
+- `research` — Web/docs research specialist
+- `reviewer` — Code review and quality analysis
+- `planner` — Creates implementation plans from context
+- `worker` — Executes plans with isolated context
+
+**Example:** For "add feature X", first use `scout` to understand the codebase, then `planner` to create a plan, then `worker` to execute it. This keeps main context lean and allows parallel work.
 
 ## Style
 
