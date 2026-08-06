@@ -1,7 +1,7 @@
 ---
 name: reviewer
 description: Code review specialist for quality and security analysis
-tools: read, grep, find, ls, bash
+tools: read, grep, find, ls, bash, websearch
 model: kimi-k2.7-code
 ---
 

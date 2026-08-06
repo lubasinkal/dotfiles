@@ -1,7 +1,7 @@
 ---
 name: planner
 description: Creates implementation plans from context and requirements
-tools: read, grep, find, ls
+tools: read, grep, find, ls, websearch
 model: qwen3.7-plus
 ---
 
