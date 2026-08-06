@@ -172,6 +172,20 @@ const RULES: Rule[] = [
 		message: "curl -o /dev/null -w adds a process — fine, but keep it to one check",
 		savings: 60,
 	},
+	{
+		id: "find-fd",
+		severity: "hint",
+		re: /\bfind\s+[^\n]*(?:-name|-type|-iname|[^x]depth\b)/,
+		message: "prefer the fd tool over find (gitignore-aware, faster, simpler syntax)",
+		savings: 500,
+	},
+	{
+		id: "grep-rg",
+		severity: "hint",
+		re: /\bgrep\s+[^\n]*-(?:r|R)[^\n]/,
+		message: "prefer the rg tool over grep -r (faster, gitignore-aware, smart-case)",
+		savings: 600,
+	},
 ];
 
 // ── lint engine ──────────────────────────────────────────────────────────
