@@ -183,7 +183,7 @@ export default function askUser(pi: ExtensionAPI) {
           tui.requestRender();
         }
 
-        function handleInput(data: Uint8Array) {
+        function handleInput(data: string) {
           if (editMode) {
             if (matchesKey(data, Key.escape)) {
               editMode = false;
