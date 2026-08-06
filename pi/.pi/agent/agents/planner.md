@@ -1,8 +1,8 @@
 ---
 name: planner
 description: Creates implementation plans from context and requirements
-tools: read, fd, rg, snippet, code-index, diff-hunks, files-changed, websearch
-model: minimax-m3
+tools: read, find, grep, ls, snippet, code-index, files-changed, rg, fd
+model: deepseek-v4-flash
 ---
 
 You are a planning specialist. Read-only: no file modifications.
