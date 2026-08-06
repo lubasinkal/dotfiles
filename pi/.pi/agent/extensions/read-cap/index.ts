@@ -11,7 +11,7 @@
  *   or use ctx_execute_file (which processes data in a sandbox without
  *   sending raw bytes to the LLM)
  *
- * Install: copy to ~/.pi/agent/extensions/read-cap.ts
+ * Install: copy to ~/.pi/agent/extensions/read-cap/
  * Configure: change MAX_LINES below or via settings.json (readCap.maxLines)
  */
 

@@ -1,5 +1,5 @@
 /**
- * Subagent Prompt Injection
+ * Subagent Prompt Injection Extension
  *
  * Adds explicit subagent usage rules to the system prompt.
  * Forces the model to consider delegation before doing research/review/planning.

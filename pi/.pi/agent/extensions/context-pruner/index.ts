@@ -27,15 +27,8 @@
  */
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-
-const DEFAULTS = {
-	maxToolResultChars: 4_000,
-	maxReadResultChars: 2_000,
-	minThinkingChars: 30,
-};
-
-/** Number of most-recent tool-result messages to leave completely untouched. */
-const KEEP_LAST_RESULTS = 2;
+import { DEFAULTS, KEEP_LAST_RESULTS } from "./types.js";
+import { hasToolResultBlock, isToolResultRole, pruneToolResultBlock } from "./helpers.js";
 
 let prevCumulative = 0;
 
@@ -63,38 +56,28 @@ export default function (pi: ExtensionAPI) {
 			if (protect.has(mi)) continue;
 
 			// Skip custom messages without content (bashExecution, compactionSummary, …)
-			if (!("content" in msg)) continue;
+			if (!msg || typeof msg !== "object" || !("content" in msg)) continue;
+			const content = (msg as { content?: unknown }).content;
+			if (!Array.isArray(content)) continue;
 
-			// Plain-string content
-			if (typeof msg.content === "string") {
-				const threshold = settings.maxToolResultChars;
-				if (msg.content.length > threshold) {
-					const excess = msg.content.length - threshold;
-					prunedTotal += excess;
-					blocksAffected++;
-					msg.content =
-						msg.content.slice(0, threshold) +
-						`\n\n[pruned: ${excess.toLocaleString()} chars]`;
+			const perMsgThreshold =
+				msg.role === "user" && content.some((b: any) => b?.type === "tool_result")
+					? settings.maxReadResultChars
+					: settings.maxToolResultChars;
+
+			const newContent: unknown[] = [];
+
+			for (const block of content) {
+				if (!block || typeof block !== "object") {
+					newContent.push(block);
+					continue;
 				}
-				continue;
-			}
 
-			if (!Array.isArray(msg.content)) continue;
+				const b = block as Record<string, unknown>;
 
-			// Determine per-message threshold
-			const isRead = msg.role === "toolResult" && msg.toolName === "read";
-			const perMsgThreshold = isRead ? settings.maxReadResultChars : settings.maxToolResultChars;
-
-			const newContent: Array<Record<string, unknown>> = [];
-
-			// Cast blocks to a loose shape: providers may emit Anthropic wire-format
-			// blocks (tool_result) that aren't modeled in the TS block union.
-			for (const rawBlock of msg.content) {
-				const block = rawBlock as { type?: string; text?: string; thinking?: string; content?: unknown };
-
-				// ── thinking blocks: drop empty / trivial ──
-				if (block.type === "thinking") {
-					const len = block.thinking?.length ?? 0;
+				// ── thinking blocks ──
+				if (b.type === "thinking" && typeof b.thinking === "string") {
+					const len = b.thinking.length;
 					if (len < settings.minThinkingChars) {
 						prunedTotal += len;
 						blocksAffected++;
@@ -154,80 +137,4 @@ export default function (pi: ExtensionAPI) {
 
 		return { messages: event.messages };
 	});
-}
-
-// ── helpers ────────────────────────────────────────────────────────────
-
-/** Quick check whether a message contains an Anthropic-format tool_result block. */
-function hasToolResultBlock(msg: unknown): boolean {
-	if (!msg || typeof msg !== "object") return false;
-	const content = (msg as { content?: unknown }).content;
-	if (!Array.isArray(content)) return false;
-	return content.some((b: any) => b?.type === "tool_result");
-}
-
-/** Current pi uses role "toolResult"; keep "tool" for legacy sessions. */
-function isToolResultRole(role: string | undefined): boolean {
-	return role === "toolResult" || role === "tool";
-}
-
-function pruneToolResultBlock(
-	block: Record<string, unknown>,
-	threshold: number,
-	accum: (n: number) => void,
-	markAffected: () => void,
-): Record<string, unknown> {
-	const raw = block.content;
-
-	if (typeof raw === "string") {
-		if (raw.length <= threshold) return block;
-		const excess = raw.length - threshold;
-		accum(excess);
-		markAffected();
-		return {
-			...block,
-			content:
-				raw.slice(0, threshold) +
-				`\n\n[pruned: ${excess.toLocaleString()} chars]`,
-		};
-	}
-
-	if (Array.isArray(raw)) {
-		return {
-			...block,
-			content: raw.map((inner) => trimInner(inner, threshold, accum, markAffected)),
-		};
-	}
-
-	return block;
-}
-
-function trimInner(
-	block: unknown,
-	threshold: number,
-	accum: (n: number) => void,
-	markAffected: () => void,
-): unknown {
-	if (!block || typeof block !== "object") return block;
-
-	const b = block as Record<string, unknown>;
-
-	if (b.type === "text" && typeof b.text === "string") {
-		if ((b.text as string).length <= threshold) return block;
-		const excess = (b.text as string).length - threshold;
-		accum(excess);
-		markAffected();
-		return {
-			...b,
-			text:
-				(b.text as string).slice(0, threshold) +
-				`\n\n[pruned: ${excess.toLocaleString()} chars]`,
-		};
-	}
-
-	if (Array.isArray(b.content)) {
-		return { ...b, content: b.content.map((inner) => trimInner(inner, threshold, accum, markAffected)) };
-	}
-
-	return block;
 }

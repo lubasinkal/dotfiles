@@ -1,8 +1,9 @@
 /**
- * Minimal Status Line
+ * Minimal Status Line Extension
  *
- * Clean footer: tokens up/down, cost, context %, model, branch.
- * Less noise than the default footer.
+ * Clean footer inspired by statusline.nvim:
+ * Left: ctx usage | tokens ↑↓ | cost
+ * Right: branch · model (thinking)
  */
 
 import type { AssistantMessage } from "@earendil-works/pi-ai";
@@ -40,31 +41,33 @@ export default function (pi: ExtensionAPI) {
 					const provider = ctx.model?.provider || "";
 					const thinking = ctx.thinkingLevel || "off";
 
-					// Context usage
+					// Left: ctx · tokens ↑↓ · cost
 					const ctxUsage = ctx.getContextUsage();
-					let ctxStr = "";
+					const leftParts: string[] = [];
+
 					if (ctxUsage && ctxUsage.tokens !== null) {
 						const pct = ctxUsage.percent ?? 0;
 						const color = pct > 80 ? "error" : pct > 60 ? "warning" : "accent";
-						ctxStr = theme.fg("dim", `ctx ${theme.fg(color, `${fmt(ctxUsage.tokens)}/${fmt(ctxUsage.contextWindow)} (${pct.toFixed(0)}%)`)}`);
+						leftParts.push(theme.fg(color, `${fmt(ctxUsage.tokens)}/${fmt(ctxUsage.contextWindow)} (${pct.toFixed(0)}%)`));
 					}
 
-					// Left: ↑↓ cost
-					const left = theme.fg("dim", `↑${theme.fg("accent", fmt(input))} ↓${theme.fg("accent", fmt(output))} $${theme.fg("success", cost.toFixed(3))}`);
-					// Center: context usage
-					// Right: branch · provider/model (thinking)
-					const rightParts = [branch, provider ? `${provider}/${model}` : model];
+					leftParts.push(theme.fg("dim", `↑${theme.fg("accent", fmt(input))} ↓${theme.fg("accent", fmt(output))}`));
+					leftParts.push(theme.fg("success", `$${cost.toFixed(2)}`));
+
+					const left = leftParts.join(theme.fg("border", " · "));
+
+					// Right: branch · model
+					const rightParts: string[] = [];
+					if (branch) rightParts.push(branch);
+					rightParts.push(provider ? `${provider}/${model}` : model);
 					if (thinking !== "off") rightParts.push(theme.fg("warning", thinking));
 					const right = theme.fg("dim", rightParts.join(" · "));
 
-					// Layout: left [ctx] right
+					// Layout: left [gap] right
 					const leftWidth = visibleWidth(left);
-					const ctxWidth = visibleWidth(ctxStr);
 					const rightWidth = visibleWidth(right);
-					const gap = Math.max(1, width - leftWidth - ctxWidth - rightWidth);
-					const ctxGap = Math.floor(gap / 2);
-					const rightGap = gap - ctxGap;
-					return [truncateToWidth(left + " ".repeat(ctxGap) + ctxStr + " ".repeat(rightGap) + right, width)];
+					const gap = Math.max(1, width - leftWidth - rightWidth);
+					return [truncateToWidth(left + " ".repeat(gap) + right, width)];
 				},
 			};
 		});

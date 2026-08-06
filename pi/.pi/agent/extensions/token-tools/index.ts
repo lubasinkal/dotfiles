@@ -1,5 +1,5 @@
 /**
- * Token-Saving Tool Suite (barrel)
+ * Token-Saving Tool Suite Extension
  *
  * Registers five custom tools that cut the biggest token sinks in the agent loop:
  * search floods, whole-file reads, redundant bash, and raw build output.
@@ -15,17 +15,17 @@
  * Direct tools (read/bash/write) are reserved for semantic judgment, full-file
  * context, and approval-sensitive actions, per each tool's guidelines.
  *
- * Install: copy to ~/.pi/agent/extensions/token-tools.ts, then /reload.
+ * Install: copy to ~/.pi/agent/extensions/token-tools/, then /reload.
  * Depends on: ripgrep (`rg`) on PATH; git for git-based tools.
  */
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { isTsJsProject } from "../lib/shared.js";
-import { snippetTool } from "../lib/snippet.js";
-import { diffHunksTool } from "../lib/diff-hunks.js";
-import { codeIndexTool } from "../lib/code-index.js";
-import { checkTool } from "../lib/check.js";
-import { filesChangedTool } from "../lib/files-changed.js";
+import { isTsJsProject } from "../../lib/shared.js";
+import { snippetTool } from "../../lib/snippet.js";
+import { diffHunksTool } from "../../lib/diff-hunks.js";
+import { codeIndexTool } from "../../lib/code-index.js";
+import { checkTool } from "../../lib/check.js";
+import { filesChangedTool } from "../../lib/files-changed.js";
 
 export default function init(pi: ExtensionAPI) {
 	pi.registerTool(snippetTool);

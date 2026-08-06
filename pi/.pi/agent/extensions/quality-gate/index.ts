@@ -1,3 +1,13 @@
+/**
+ * Quality Gate Extension
+ *
+ * Checks for common issues in git diffs after agent operations:
+ * - .only in tests
+ * - debugger statements
+ * - @ts-ignore (should use @ts-expect-error)
+ * - console.log left in code
+ */
+
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { execSync } from "node:child_process";
 
