@@ -185,7 +185,7 @@ export default function askUser(pi: ExtensionAPI) {
 
         function handleInput(data: Uint8Array) {
           if (editMode) {
-            if (matchesKey(data, Key.Escape)) {
+            if (matchesKey(data, Key.escape)) {
               editMode = false;
               editor.setText("");
               refresh();
@@ -196,18 +196,18 @@ export default function askUser(pi: ExtensionAPI) {
             return;
           }
 
-          if (matchesKey(data, Key.ArrowUp) || matchesKey(data, "k")) {
+          if (matchesKey(data, Key.up) || matchesKey(data, "k")) {
             optionIndex = Math.max(0, optionIndex - 1);
             refresh();
             return;
           }
-          if (matchesKey(data, Key.ArrowDown) || matchesKey(data, "j")) {
+          if (matchesKey(data, Key.down) || matchesKey(data, "j")) {
             optionIndex = Math.min(allOptions.length - 1, optionIndex + 1);
             refresh();
             return;
           }
 
-          if (matchesKey(data, Key.Enter)) {
+          if (matchesKey(data, Key.enter)) {
             const selected = allOptions[optionIndex];
             if (selected?.isOther) {
               editMode = true;
@@ -222,7 +222,7 @@ export default function askUser(pi: ExtensionAPI) {
             return;
           }
 
-          if (matchesKey(data, Key.Escape)) {
+          if (matchesKey(data, Key.escape)) {
             done(null);
           }
         }
