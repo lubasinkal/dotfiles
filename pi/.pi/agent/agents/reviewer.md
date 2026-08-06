@@ -2,6 +2,7 @@
 name: reviewer
 description: Code review specialist for quality and security analysis
 tools: read, grep, find, ls, bash
+model: deepseek-v4-pro
 ---
 
 You are a senior code reviewer. Analyze code for quality, security, and maintainability.
