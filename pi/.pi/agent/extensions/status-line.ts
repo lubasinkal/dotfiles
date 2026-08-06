@@ -40,15 +40,31 @@ export default function (pi: ExtensionAPI) {
 					const provider = ctx.model?.provider || "";
 					const thinking = ctx.thinkingLevel || "off";
 
+					// Context usage
+					const ctxUsage = ctx.getContextUsage();
+					let ctxStr = "";
+					if (ctxUsage && ctxUsage.tokens !== null) {
+						const pct = ctxUsage.percent ?? 0;
+						const color = pct > 80 ? "error" : pct > 60 ? "warning" : "accent";
+						ctxStr = theme.fg("dim", `ctx ${theme.fg(color, `${fmt(ctxUsage.tokens)}/${fmt(ctxUsage.contextWindow)} (${pct.toFixed(0)}%)`)}`);
+					}
+
 					// Left: ↑↓ cost
 					const left = theme.fg("dim", `↑${theme.fg("accent", fmt(input))} ↓${theme.fg("accent", fmt(output))} $${theme.fg("success", cost.toFixed(3))}`);
+					// Center: context usage
 					// Right: branch · provider/model (thinking)
 					const rightParts = [branch, provider ? `${provider}/${model}` : model];
 					if (thinking !== "off") rightParts.push(theme.fg("warning", thinking));
 					const right = theme.fg("dim", rightParts.join(" · "));
 
-					const gap = Math.max(1, width - visibleWidth(left) - visibleWidth(right));
-					return [truncateToWidth(left + " ".repeat(gap) + right, width)];
+					// Layout: left [ctx] right
+					const leftWidth = visibleWidth(left);
+					const ctxWidth = visibleWidth(ctxStr);
+					const rightWidth = visibleWidth(right);
+					const gap = Math.max(1, width - leftWidth - ctxWidth - rightWidth);
+					const ctxGap = Math.floor(gap / 2);
+					const rightGap = gap - ctxGap;
+					return [truncateToWidth(left + " ".repeat(ctxGap) + ctxStr + " ".repeat(rightGap) + right, width)];
 				},
 			};
 		});
