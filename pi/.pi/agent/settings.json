@@ -1,8 +1,8 @@
 {
-  "defaultModel": "mimo-v2.5",
+  "defaultModel": "minimax-m3",
   "defaultProvider": "opencode-go",
-  "defaultThinkingLevel": "high",
-  "hideThinkingBlock": true,
+  "defaultThinkingLevel": "medium",
+  "hideThinkingBlock": false,
   "lastChangelogVersion": "0.84.1",
   "packages": [
     "npm:pi-hermes-memory",
