@@ -1,5 +1,5 @@
 {
-  "defaultModel": "minimax-m3",
+  "defaultModel": "mimo-v2.5",
   "defaultProvider": "opencode-go",
   "defaultThinkingLevel": "medium",
   "hideThinkingBlock": false,
