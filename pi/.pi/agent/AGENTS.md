@@ -2,34 +2,27 @@
 
 ## Token Efficiency
 
-- **Navigate by meaning** — Use `snippet`, `code-index`, `rg` for discovery; avoid reading whole files unless necessary.
-- **Fresh sessions** — Use `/clear` between unrelated tasks to prevent context bloat.
-- **Scope precisely** — Point to exact files/functions/lines, not open-ended searches.
-- **Compress output** — Pipe bash output through filters; use `--porcelain`, `-o name`, `--stat`.
-- **Read structure first** — Use `code-index` to find symbols before reading files.
-- **Commit often** — Checkpoints let you restart clean when context fills.
+- Use `snippet`, `code-index`, `rg` for discovery — never read whole files unless forced.
+- Use `code-index` before `read` to locate symbols.
+- Pipe bash output through filters (`--porcelain`, `-o name`, `--stat`).
+- Point to exact files/functions/lines — no open-ended searches.
+- `/clear` between unrelated tasks.
 
-## Subagent Usage
+## Subagents
 
-**Always use subagents for:**
-- Multi-file research (understanding a codebase, finding patterns)
-- Web research (looking up docs, APIs, examples)
-- Code review (checking changes for issues)
-- Planning before implementation (creating step-by-step plans)
-- Parallel tasks (multiple independent investigations)
+**Mandatory for:** research, code review, planning, parallel tasks, codebase exploration.
 
-**Agents available:**
-- `scout` — Fast codebase recon, returns compressed context
-- `research` — Web/docs research specialist
-- `reviewer` — Code review and quality analysis
-- `planner` — Creates implementation plans from context
-- `worker` — Executes plans with isolated context
-
-**Example:** For "add feature X", first use `scout` to understand the codebase, then `planner` to create a plan, then `worker` to execute it. This keeps main context lean and allows parallel work.
+| Agent     | Role                         |
+|-----------|------------------------------|
+| `scout`   | Fast codebase recon          |
+| `research`| Web/docs lookup              |
+| `reviewer`| Code review                  |
+| `planner` | Implementation plans         |
+| `worker`  | Plan execution               |
 
 ## Style
 
-- Be direct. No preamble, no sign-offs, no recaps.
-- Show code instead of describing it.
-- Use lists instead of paragraphs.
-- Explain reasoning only when explicitly asked why or how.
+- Direct. No preamble, no sign-offs, no recaps.
+- Show code, don't describe it.
+- Use lists, not paragraphs.
+- Explain reasoning only when asked.
