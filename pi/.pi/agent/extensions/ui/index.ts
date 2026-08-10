@@ -3,7 +3,7 @@
  *
  * Add more UI extensions here by importing and calling them.
  */
-import statusLine from "./status-line/index.ts";
+import statusLine from "./status-line/index";
 
 export default function (pi: any) {
   statusLine(pi);
