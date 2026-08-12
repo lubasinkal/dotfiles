@@ -12,6 +12,7 @@ Each directory in this repository represents a "package" that can be stowed into
 - `ghostty/`: Contains `.config/ghostty/`.
 - `herdr/`: Contains `.config/herdr/` — agent multiplexer config.
 - `nvim/`: A git submodule containing `.config/nvim/`.
+- `opencode/`: Contains `.config/opencode/opencode.json` — global opencode config (MCP servers, LSP). Secrets are kept out of git via `{env:VAR}` substitution; see below.
 - `pi/`: Contains `.pi/` — opencode agent configurations.
 - `starship/`: Contains `.config/starship.toml`.
 - `tmux/`: Contains `.config/tmux/tmux.conf` — opinionated config with Vesper-inspired theme, mouse support, vim-style navigation, and TPM plugin manager.
@@ -59,8 +60,23 @@ To set up these dotfiles on a new machine:
 3. Stow each package:
    ```bash
    cd ~/dotfiles
-   stow bash doom git ghostty herdr nvim pi starship tmux vim walker wezterm zsh
+   stow bash doom git ghostty herdr nvim opencode pi starship tmux vim walker wezterm zsh
    ```
+
+## OpenCode
+
+`opencode/.config/opencode/opencode.json` holds the global opencode config. Sensitive values
+are referenced as `{env:VAR}` placeholders (e.g. `CONTEXT7_API_KEY`, `N8N_MCP_TOKEN`). On a
+new machine, create the untracked file `~/.config/opencode/secrets.sh` with the real values,
+e.g.:
+
+```sh
+export CONTEXT7_API_KEY="..."
+export N8N_MCP_TOKEN="..."
+```
+
+`.zshrc` sources it automatically if present. Backup of the original config with real secrets
+lives at `/tmp/opencode/opencode.jsonc.bak`.
 
 ## Tmux Setup
 

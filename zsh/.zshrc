@@ -16,3 +16,5 @@ export PATH="$HOME/.local/bin:$PATH"
 export PATH="$HOME/.bun/bin:$PATH"
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+# OpenCode MCP secrets (untracked — create ~/.config/opencode/secrets.sh)
+[[ ! -f ~/.config/opencode/secrets.sh ]] || source ~/.config/opencode/secrets.sh
