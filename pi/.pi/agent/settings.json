@@ -1,7 +1,7 @@
 {
-  "defaultModel": "mimo-v2.5",
+  "defaultModel": "deepseek-v4-flash",
   "defaultProvider": "opencode-go",
-  "defaultThinkingLevel": "medium",
+  "defaultThinkingLevel": "high",
   "hideThinkingBlock": false,
   "lastChangelogVersion": "0.84.1",
   "packages": [
