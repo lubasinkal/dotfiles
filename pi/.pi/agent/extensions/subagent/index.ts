@@ -296,6 +296,10 @@ async function runSingleAgent(
 	const effectiveModel = modelOverride ?? agent.model;
 	if (effectiveModel) args.push("--model", effectiveModel);
 	if (agent.tools && agent.tools.length > 0) args.push("--tools", agent.tools.join(","));
+	const VALID_THINKING = ["off", "minimal", "low", "medium", "high", "xhigh", "max"];
+	if (agent.thinking && VALID_THINKING.includes(agent.thinking)) {
+		args.push("--thinking", agent.thinking);
+	}
 
 	let tmpPromptDir: string | null = null;
 	let tmpPromptPath: string | null = null;
