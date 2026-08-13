@@ -1,36 +1,25 @@
-# Agent Guidelines
+# Agent Rules
 
-## Token Efficiency
+## Search
+- `snippet`/`rg`/`fd`/`code-index`/`memory_search` first — never bash grep/find/awk.
+- `read` only needed sections (`offset`/`limit`) — never whole files.
+- Answer with file:line anchors. Never invent APIs or line numbers — flag or verify.
 
-- Use `snippet`, `code-index`, `rg` for discovery — never read whole files unless forced.
-- Use `code-index` before `read` to locate symbols.
-- Pipe bash output through filters (`--porcelain`, `-o name`, `--stat`).
-- Point to exact files/functions/lines — no open-ended searches.
+## Execute
+- Bash = execution + aggregation. 3+ dependent steps → one pipeline; filter/sort/count in shell, intermediates never hit context.
+- One call per need — no re-reads or duplicate searches.
+- Before commit: `files-changed` → `diff-hunks` → commit.
 - `/clear` between unrelated tasks.
 
-## Tool Use
-
-Three principles (from Anthropic's advanced tool use playbook):
-
-- **Discover, don't load** (tool search): locate with `snippet`/`code-index`/`fd`/`rg`/`memory_search` first; read only what's needed. Subagent `tools:` lists are the `defer_loading` equivalent — keep them minimal.
-- **Batch in `bash`** (programmatic tool calling): 3+ dependent steps → one pipeline. Filter, sort, aggregate in the shell so intermediate data never enters context. `git diff --stat` and `rg -c` beat raw dumps.
-- **Examples over schema** (tool use examples): describe tools with concrete invocations, not just parameter lists. Extend that to answers — show the call, not the option table.
-
 ## Subagents
-
-**Mandatory for:** research, code review, planning, parallel tasks, codebase exploration.
-
-| Agent     | Role                         |
-|-----------|------------------------------|
-| `scout`   | Fast codebase recon          |
-| `research`| Web/docs lookup              |
-| `reviewer`| Code review                  |
-| `planner` | Implementation plans         |
-| `worker`  | Plan execution               |
+- Delegate: research, review, planning, parallel tasks, exploration.
+- scout=recon · research=web · reviewer=review · planner=plan · worker=execute.
+- Tight task + minimal `tools:` list.
 
 ## Style
+- Direct. No preamble, sign-offs, recaps, fluff.
+- Lists over prose. Show code/calls, not descriptions. Show the call, not the option table.
+- Do exactly what's asked — no scope creep.
 
-- Direct. No preamble, no sign-offs, no recaps.
-- Show code, don't describe it.
-- Use lists, not paragraphs.
-- Explain reasoning only when asked.
+## Verify
+- Run the named check before reporting done. Fix forward or report — don't thrash.
