@@ -400,7 +400,10 @@ export default function webSearchExtension(pi: ExtensionAPI) {
     description:
       "Search the web (mode='search') or fetch a page's content (mode='fetch'). " +
       "Fetch supports format options: markdown (default), text, or html. " +
-      "Output truncated to ~12KB.",
+      "Output truncated to ~12KB.\n" +
+      "Examples:\n" +
+      '- { query: "tmux 3.7 changelog" } — search mode\n' +
+      '- { query: "https://example.com/docs", mode: "fetch", format: "markdown" } — fetch a page',
     promptSnippet: "Search the web or fetch a page's text content",
     promptGuidelines: [
       "Use websearch when you need current or external info not in the repo.",

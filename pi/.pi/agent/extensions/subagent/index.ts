@@ -466,14 +466,17 @@ export default function (pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "subagent",
 		label: "Subagent",
-		description: [
-			"REQUIRED for: research, code review, planning, parallel tasks. DO NOT do these yourself.",
-			"Spawns isolated agent with its own context window. Keeps main context lean.",
-			"Agents: scout (codebase recon), research (web/docs), reviewer (code review), planner (implementation plans), worker (execute plans).",
-			"Modes: single (agent + task), parallel (tasks array), chain (sequential).",
-			`Default agent scope: user (from ${path.join(getAgentDir(), "agents")}).`,
-			`To enable project-local agents in ${CONFIG_DIR_NAME}/agents, set agentScope: "both" (or "project").`,
-		].join(" "),
+		description:
+			"REQUIRED for: research, code review, planning, parallel tasks. DO NOT do these yourself.\n" +
+			"Spawns isolated agent with its own context window. Keeps main context lean.\n" +
+			"Agents: scout (codebase recon), research (web/docs), reviewer (code review), planner (implementation plans), worker (execute plans).\n" +
+			"Modes: single (agent + task), parallel (tasks array), chain (sequential).\n" +
+			`Default agent scope: user (from ${path.join(getAgentDir(), "agents")}).\n` +
+			`To enable project-local agents in ${CONFIG_DIR_NAME}/agents, set agentScope: "both" (or "project").\n` +
+			"Examples:\n" +
+			'- { agent: "scout", task: "Map src/ structure" } — single mode\n' +
+			'- { tasks: [{ agent: "research", task: "..." }, { agent: "reviewer", task: "..." }] } — parallel\n' +
+			'- { chain: [{ agent: "scout", task: "..." }, { agent: "planner", task: "Plan from: {previous}" }] } — sequential chain',
 		parameters: SubagentParams,
 
 		async execute(_toolCallId, params, signal, onUpdate, ctx) {
