@@ -13,7 +13,7 @@ export function createCmdLintTool() {
 		name: "lint-cmd",
 		label: "Lint shell command",
 		description:
-			"Analyze or optimize a shell command before running it. Returns danger blocks, safe rewrites, and hints, plus the optimized command and chars saved.",
+			"Analyze or optimize a shell command before running it. Returns danger blocks, safe rewrites, and hints, plus the optimized command and chars saved.\n\nExamples:\n- { command: \"grep -rn foo src\" } — suggests an rg rewrite\n- { command: \"git diff --stat\" } — clean, no changes\n- { command: \"rm -rf /tmp/build\" } — danger block, do not run\n- { command: \"find . -name '*.ts' | head\", apply: true } — returns the optimized command ready to run",
 		promptSnippet: "lint-cmd: analyze/optimize a shell command before running it",
 		promptGuidelines: [
 			"Use lint-cmd before long or expensive bash commands to get the token-efficient equivalent.",

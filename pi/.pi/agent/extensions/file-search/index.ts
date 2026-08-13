@@ -260,7 +260,7 @@ export default function fileSearch(pi: ExtensionAPI) {
     name: "fd",
     label: "Find Files",
     description:
-      "Find files and directories by name with fd. Respects .gitignore by default. Results are limited to 1000 entries unless a higher limit is given; output is limited to 2000 lines or 50KB, and complete truncated output is saved to a temporary file.",
+      "Find files and directories by name with fd. Respects .gitignore by default. Results are limited to 1000 entries unless a higher limit is given; output is limited to 2000 lines or 50KB, and complete truncated output is saved to a temporary file.\n\nExamples (tool params):\n- { pattern: \"test\" } — anything matching 'test' under cwd\n- { extension: \"ts\", path: \"src\" } — TypeScript files under src/\n- { glob: true, pattern: \"*.test.ts\" } — test files by glob\n- { type: \"directory\", pattern: \"node_modules\" } — directories only\n- { hidden: true, pattern: \"^\\.gitignore\" } — dotfiles included\n- { pattern: \"\", max_depth: 1, limit: 50 } — shallow listing",
     promptSnippet:
       "Find files and directories by name with fd (fast, gitignore-aware).",
     promptGuidelines: [
@@ -374,7 +374,7 @@ export default function fileSearch(pi: ExtensionAPI) {
     name: "rg",
     label: "Search Content",
     description:
-      "Search file contents with ripgrep. Uses smart-case matching, respects .gitignore by default, and returns at most 100 matches per file unless a different limit is given. Output is limited to 2000 lines or 50KB; complete truncated output is saved to a temporary file.",
+      "Search file contents with ripgrep. Uses smart-case matching, respects .gitignore by default, and returns at most 100 matches per file unless a different limit is given. Output is limited to 2000 lines or 50KB; complete truncated output is saved to a temporary file.\n\nExamples (tool params):\n- { pattern: \"TODO|FIXME\" } — find todos (smart-case)\n- { pattern: \"a.b(c)\", fixed_strings: true } — literal match, no escaping needed\n- { pattern: \"export (async )?function\", glob: \"*.ts\" } — TS function declarations\n- { pattern: \"error\", path: \"src\", context: 3, limit: 50 } — with surrounding lines\n- { pattern: \"process(\", file_type: \"ts\" } — filter by file type\n- { case_sensitive: true, pattern: \"User\" } — exact case",
     promptSnippet:
       "Search file contents with ripgrep (fast regex content search).",
     promptGuidelines: [

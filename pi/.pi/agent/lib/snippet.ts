@@ -29,7 +29,7 @@ export const snippetTool = defineTool({
 	name: "snippet",
 	label: "Snippet search",
 	description:
-		"Search code with ripgrep. Returns total match count plus one compact match-centered line per hit (capped match-centered lines).",
+		"Search code with ripgrep. Returns total match count plus one compact match-centered line per hit (capped match-centered lines).\n\nExamples:\n- { query: \"useMemo\" } — references and usage of a hook\n- { query: \"apiKey\", path: \"src/\" } — narrow to a directory\n- { query: \"fetch\\\\(\", maxResults: 5 } — regex, few anchors\n- { query: \"timeout: 5000\", maxLineLength: 80 } — literal with shorter lines",
 	promptSnippet: "snippet: code search — discovery, references, patterns (capped match-centered lines)",
 	promptGuidelines: [
 		"Use snippet for code discovery: unknown symbols, references, usage patterns, config keys — anywhere you'd reach for bash grep/rg pipelines.",
