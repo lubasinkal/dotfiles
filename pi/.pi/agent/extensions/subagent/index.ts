@@ -398,7 +398,9 @@ async function runSingleAgent(
 				resolve(code ?? 0);
 			});
 
-			proc.on("error", () => {
+			proc.on("error", (err: Error) => {
+				currentResult.stderr = err.message;
+				currentResult.errorMessage = `Subagent spawn failed: ${err.message}`;
 				resolve(1);
 			});
 
