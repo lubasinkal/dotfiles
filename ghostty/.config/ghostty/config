@@ -1,4 +1,6 @@
-theme = Vesper
+# cyberdream — matches tmux status (#16181a bg) and nvim cyberdream palette
+# Theme file: themes/cyberdream (overrides any bundled theme)
+theme = cyberdream
 font-family = "SpaceMono Nerd Font Mono"
 font-size = 13
 background-opacity = 0.9
