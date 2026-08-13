@@ -7,6 +7,7 @@
 
 ## Execute
 - Bash = execution + aggregation. 3+ dependent steps → one pipeline; filter/sort/count in shell, intermediates never hit context.
+- Prioritize `tools:` — never `grep`/`find`/`awk`/`sed`/`ripgrep` before looking up tools in context abd using them.
 - One call per need — no re-reads or duplicate searches.
 - Before commit: `files-changed` → `diff-hunks` → commit.
 - `/clear` between unrelated tasks.
