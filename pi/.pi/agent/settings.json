@@ -2,8 +2,8 @@
   "defaultModel": "deepseek-v4-flash",
   "defaultProvider": "opencode-go",
   "defaultThinkingLevel": "high",
-  "hideThinkingBlock": false,
-  "lastChangelogVersion": "0.84.1",
+  "hideThinkingBlock": true,
+  "lastChangelogVersion": "0.84.2",
   "packages": [
     "npm:pi-hermes-memory",
     "npm:@ollama/pi-web-search"
