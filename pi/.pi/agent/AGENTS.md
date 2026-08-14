@@ -8,9 +8,10 @@
 - Answer with file:line anchors. Never invent APIs or line numbers — flag or verify.
 
 ## Execute
-- Bash = execution + aggregation only. NEVER write search commands in bash: no `grep`/`find`/`awk`/`sed`/`ripgrep` in a bash call, not even as a pipe — use the dedicated tools.
+- Bash = execution + aggregation only. NEVER write search commands in bash: no `rg`/`fd`/`grep`/`find`/`awk`/`sed`/`ripgrep` in a bash call, not even as a pipe — use the dedicated tools (`rg`, `fd`, `snippet`, `code-index`, `read`).
 - Prioritize `tools:` — always look up the available tools in context and use them; never fall back to bash grep/find/awk/sed/ripgrep.
 - One call per need — no re-reads or duplicate searches.
+- One command per `bash` call — no `&&`/`;`/`||` chains or multi-pipe pipelines. Split into separate calls or use dedicated tools.
 - Before commit: `files-changed` → `diff-hunks` → commit.
 - `/clear` between unrelated tasks.
 

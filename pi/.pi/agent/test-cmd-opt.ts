@@ -12,7 +12,7 @@ function makeMockPi() {
 }
 
 const { pi, handlers, tools } = makeMockPi();
-const mod = await import(join(process.cwd(), "extensions", "cmd-opt.ts"));
+const mod = await import(join(process.cwd(), "extensions", "cmd-opt", "index.ts"));
 mod.default(pi);
 
 let pass = 0, fail = 0;

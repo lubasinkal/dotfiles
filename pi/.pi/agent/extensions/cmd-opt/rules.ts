@@ -63,6 +63,13 @@ export const RULES: Rule[] = [
 
 	// ── hints (teach the cheaper equivalent via a trailing comment) ─────
 	{
+		id: "rg-bare",
+		severity: "hint",
+		re: /(?:^|[|;&]\s*)\brg\b/,
+		message: "use the rg TOOL, not bash rg — pass path/glob/case_sensitive/fixed_strings/context/limit; bash is execution+aggregation only (AGENTS.md)",
+		savings: 900,
+	},
+	{
 		id: "rg-head",
 		severity: "hint",
 		re: /\brg\b[^\n]*\|\s*head\b/,
@@ -74,6 +81,13 @@ export const RULES: Rule[] = [
 		severity: "hint",
 		re: /\bgrep\s+-r?n\b/,
 		message: "prefer the snippet tool over grep -rn (capped, match-centered lines)",
+		savings: 600,
+	},
+	{
+		id: "grep-bare",
+		severity: "hint",
+		re: /(?:^|[|;&]\s*)\bgrep\b/,
+		message: "use the rg TOOL over grep (gitignore-aware, smart-case, capped); grep in bash is banned by AGENTS.md",
 		savings: 600,
 	},
 	{
@@ -145,5 +159,12 @@ export const RULES: Rule[] = [
 		re: /\bgrep\s+[^\n]*-(?:r|R)[^\n]/,
 		message: "prefer the rg tool over grep -r (faster, gitignore-aware, smart-case)",
 		savings: 600,
+	},
+	{
+		id: "long-chain",
+		severity: "hint",
+		re: /&&[\s\S]*&&|\|\|[\s\S]*\|\||(?:[^|]*\|){4,}/,
+		message: "long chained bash — split into separate bash calls or dedicated tools (fd/rg/snippet/read); one command per call, single pipe max for aggregation (AGENTS.md)",
+		savings: 500,
 	},
 ];
