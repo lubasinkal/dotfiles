@@ -6,3 +6,5 @@
 
 # uv
 export PATH="$HOME/.local/bin:$PATH"
+
+. "$HOME/.atuin/bin/env"

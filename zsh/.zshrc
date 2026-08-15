@@ -18,3 +18,7 @@ export PATH="$HOME/.bun/bin:$PATH"
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 # OpenCode MCP secrets (untracked — create ~/.config/opencode/secrets.sh)
 [[ ! -f ~/.config/opencode/secrets.sh ]] || source ~/.config/opencode/secrets.sh
+
+. "$HOME/.atuin/bin/env"
+
+eval "$(atuin init zsh)"

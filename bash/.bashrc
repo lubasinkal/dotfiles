@@ -19,3 +19,6 @@ eval "$(starship init bash)"
 export PATH="$HOME/.local/bin:$PATH"
 # bun
 export PATH="$HOME/.bun/bin:$PATH"
+
+. "$HOME/.atuin/bin/env"
+eval "$(atuin init bash)"
