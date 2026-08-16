@@ -2,7 +2,7 @@
 name: worker
 description: Executes an implementation plan step-by-step. Reports real diffs and verification results.
 tools: read, write, edit, bash, rg, fd, snippet, code-index, diff-hunks, files-changed, lint-cmd
-model: opencode-go/deepseek-v4-flash
+model: opencode-go/mimo-v2.5
 thinking: minimal
 ---
 

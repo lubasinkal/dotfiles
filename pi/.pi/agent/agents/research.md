@@ -2,7 +2,7 @@
 name: research
 description: Web research. Returns URL-cited external facts (docs, APIs, version notes, examples).
 tools: websearch, read, rg, fd, snippet, code-index
-model: opencode-go/deepseek-v4-flash
+model: opencode-go/mimo-v2.5
 thinking: low
 ---
 

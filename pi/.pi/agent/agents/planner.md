@@ -2,7 +2,7 @@
 name: planner
 description: Converts context and requirements into a verifiable, file-anchored implementation plan. No edits.
 tools: read, rg, fd, snippet, code-index, files-changed, diff-hunks
-model: opencode-go/deepseek-v4-pro
+model: opencode-go/mimo-v2.5-pro
 thinking: high
 ---
 

@@ -2,7 +2,7 @@
 name: reviewer
 description: Reviews changed code for bugs, security, and maintainability. Read-only. No edits.
 tools: read, bash, rg, fd, snippet, code-index, diff-hunks, files-changed
-model: opencode-go/deepseek-v4-flash
+model: opencode-go/mimo-v2.5
 thinking: high
 ---
 
