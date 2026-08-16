@@ -2,7 +2,7 @@
 # Theme file: themes/cyberdream (overrides any bundled theme)
 theme = cyberdream
 font-family = "SpaceMono Nerd Font Mono"
-font-size = 13
+font-size = 15
 background-opacity = 0.9
 maximize = true
 copy-on-select = clipboard
