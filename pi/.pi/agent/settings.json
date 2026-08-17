@@ -1,17 +1,18 @@
 {
+  "collapseChangelog": true,
   "defaultModel": "minimax-m3",
   "defaultProvider": "opencode-go",
   "defaultThinkingLevel": "high",
+  "enableInstallTelemetry": false,
   "hideThinkingBlock": true,
   "lastChangelogVersion": "0.84.2",
   "packages": [
-    "npm:pi-hermes-memory"
+    "npm:pi-hermes-memory",
+    "npm:@ollama/pi-web-search"
   ],
   "terminal": {
     "showTerminalProgress": true
   },
   "theme": "dark",
-  "tuiMode": "regular",
-  "enableInstallTelemetry": false,
-  "collapseChangelog": true
+  "tuiMode": "regular"
 }
