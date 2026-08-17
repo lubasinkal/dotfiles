@@ -1,29 +1,16 @@
 # Agent Rules
 
-## Search
-- `snippet`/`rg`/`fd`/`code-index`/`memory_search` — never bash grep/find/awk/ripgrep.
-- The `rg`/`fd` tools accept any path — pass `path=` for files or dirs (e.g. `path: /tmp/ghostty-man.txt`). Never pipe shell output through grep/head/awk/sed.
-- Filter with tool params (`path`, `glob`, `limit`, `maxResults`, `context`), never shell pipes.
-- `read` only needed sections (`offset`/`limit`) — never whole files.
-- Answer with file:line anchors. Never invent APIs or line numbers — flag or verify.
-
-## Execute
-- Bash = execution + aggregation only. NEVER write search commands in bash: no `rg`/`fd`/`grep`/`find`/`awk`/`sed`/`ripgrep` in a bash call, not even as a pipe — use the dedicated tools (`rg`, `fd`, `snippet`, `code-index`, `read`).
-- Prioritize `tools:` — always look up the available tools in context and use them; never fall back to bash grep/find/awk/sed/ripgrep.
-- One call per need — no re-reads or duplicate searches.
-- One command per `bash` call — no `&&`/`;`/`||` chains or multi-pipe pipelines. Split into separate calls or use dedicated tools.
-- Before commit: `files-changed` → `diff-hunks` → commit.
-- `/clear` between unrelated tasks.
+## Search & execute
+- fd rg snippet code-index read files-changed diff-hunks. No bash grep find awk sed.
+- Bash: 1 cmd/call. No && ; ||. lint-cmd before non-trivial.
+- ask_user when options enumerable (≥2).
 
 ## Subagents
-- Delegate: research, review, planning, parallel tasks, exploration.
-- scout=recon · research=web · reviewer=review · planner=plan · worker=execute.
-- Tight task + minimal `tools:` list.
+- scout=recon · research=web/docs · reviewer=review · planner=plan · worker=execute.
+- Tight task + minimal tools.
 
 ## Style
-- Direct. No preamble, sign-offs, recaps, fluff.
-- Lists over prose. Show code/calls, not descriptions. Show the call, not the option table.
-- Do exactly what's asked — no scope creep.
+- Direct. Lists. file:line. No fluff.
 
 ## Verify
-- Run the named check before reporting done. Fix forward or report — don't thrash.
+- Run named check. Fix forward, don't thrash.
