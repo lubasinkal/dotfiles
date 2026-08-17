@@ -2,11 +2,7 @@
   "name": "pi-extensions",
   "private": true,
   "dependencies": {
-    "@ollama/pi-web-search": "^0.0.5",
-    "context-mode": "^1.0.169",
-    "pi-hermes-memory": "^0.9.5",
-    "pi-subagents": "^0.37.2",
-    "pi-web-access": "^0.16.0"
+    "pi-hermes-memory": "^0.9.5"
   },
   "allowScripts": {
     "better-sqlite3": true
