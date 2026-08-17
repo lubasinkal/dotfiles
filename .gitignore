@@ -3,3 +3,4 @@
 
 # tmux plugins (installed by TPM)
 /tmux/.config/tmux/plugins/
+/tmux/.config/tmux/history
