@@ -2,8 +2,7 @@
   "name": "pi-extensions",
   "private": true,
   "dependencies": {
-    "@ollama/pi-web-search": "^0.0.5",
-    "pi-memory": "^0.4.2"
+    "@ollama/pi-web-search": "^0.0.5"
   },
   "allowScripts": {
     "better-sqlite3": true
