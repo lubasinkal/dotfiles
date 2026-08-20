@@ -1,6 +1,6 @@
 {
   "collapseChangelog": true,
-  "defaultModel": "minimax-m3",
+  "defaultModel": "muse-spark-1.2-contributor",
   "defaultProvider": "opencode-go",
   "defaultThinkingLevel": "high",
   "enableInstallTelemetry": false,
