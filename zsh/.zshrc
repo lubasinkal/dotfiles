@@ -22,3 +22,6 @@ export PATH="$HOME/.bun/bin:$PATH"
 . "$HOME/.atuin/bin/env"
 
 eval "$(atuin init zsh)"
+
+# bun completions
+[ -s "/home/lubasi/.bun/_bun" ] && source "/home/lubasi/.bun/_bun"
