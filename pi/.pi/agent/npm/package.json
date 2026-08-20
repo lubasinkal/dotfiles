@@ -3,7 +3,7 @@
   "private": true,
   "dependencies": {
     "@ollama/pi-web-search": "^0.0.5",
-    "pi-hermes-memory": "^0.9.5"
+    "pi-memory": "^0.4.2"
   },
   "allowScripts": {
     "better-sqlite3": true

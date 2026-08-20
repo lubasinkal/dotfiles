@@ -35,5 +35,8 @@
 .pi/agent/pi-hermes-memory/
 .pi/agent/projects-memory/
 
+# pi-memory (extension data, replaces pi-hermes-memory)
+.pi/agent/memory/
+
 # Typecheck deps (symlinks to global install)
 .pi/agent/node_modules/
