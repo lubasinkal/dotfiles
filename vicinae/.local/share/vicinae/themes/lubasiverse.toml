@@ -1,0 +1,69 @@
+# Lubasiverse — matches the cyberdream palette used in ghostty, neovim, and tmux.
+# Source: https://github.com/scottmckendry/cyberdream.nvim
+#
+#   bg #0d0e11, fg #ffffff, magenta accent #bd5eff, border #3c4048
+# Opacity is handled by launcher_window.opacity in settings.json.
+
+[meta]
+name = "Lubasiverse"
+description = "Cyberdream palette — matches ghostty, neovim, and tmux"
+variant = "dark"
+inherits = "vicinae-dark"
+
+[colors.core]
+accent = "#bd5eff"
+accent_foreground = "#0d0e11"
+background = "#0d0e11"
+foreground = "#ffffff"
+secondary_background = "#16181a"
+border = "#3c4048"
+
+[colors.main_window]
+border = "#3c4048"
+footer = { background = "colors.core.secondary_background" }
+
+[colors.accents]
+blue = "#5ea1ff"
+green = "#5eff6c"
+magenta = "#bd5eff"
+orange = "#ff6e5e"
+red = "#ff6e5e"
+yellow = "#f1ff5e"
+cyan = "#5ef1ff"
+purple = "#bd5eff"
+
+[colors.text]
+default = "colors.core.foreground"
+muted = "#a0a0a0"
+placeholder = "#a0a0a0"
+selection = { background = "colors.core.accent", foreground = "colors.core.accent_foreground" }
+
+[colors.text.links]
+default = "#5ea1ff"
+visited = "#bd5eff"
+
+[colors.input]
+border = "#3c4048"
+border_focus = "colors.core.accent"
+
+[colors.button.primary]
+background = "#16181a"
+foreground = "colors.core.foreground"
+focus = { outline = "colors.core.accent" }
+
+[colors.list.item.hover]
+foreground = "colors.core.foreground"
+
+[colors.list.item.selection]
+background = "#3c4048"
+foreground = "colors.core.accent"
+
+[colors.grid.item]
+background = "#16181a"
+
+[colors.scrollbars]
+background = "#3c4048"
+
+[colors.loading]
+bar = "colors.core.accent"
+spinner = "colors.core.foreground"

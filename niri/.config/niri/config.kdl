@@ -389,7 +389,7 @@ binds {
 
     // Suggested binds for running programs: terminal, app launcher, screen locker.
     Mod+T hotkey-overlay-title="Open a Terminal: ghostty" { spawn "ghostty"; }
-    Mod+D hotkey-overlay-title="Run an Application: rofi" { spawn-sh "pkill rofi || exec rofi -show drun"; }
+    Mod+Space hotkey-overlay-title="Toggle Vicinae Launcher" { spawn-sh "vicinae toggle"; }
     Alt+Space hotkey-overlay-title="Toggle Noctalia Launcher" { spawn "qs" "-c" "noctalia-shell" "ipc" "call" "launcher" "toggle"; }
     Super+Alt+L hotkey-overlay-title="Lock the Screen: swaylock" { spawn "swaylock"; }
 
