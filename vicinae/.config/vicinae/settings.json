@@ -9,24 +9,24 @@
 // Learn more about configuration at https://docs.vicinae.com/config
 
 {
-  "$schema": "https://vicinae.com/schemas/config.json",
-  "font": {
-    "normal": {
-      "family": "Inter"
-    }
-  },
-  "theme": {
-    "dark": {
-      "name": "lubasiverse",
-      "icon_theme": "auto"
-    }
-  },
-  "launcher_window": {
-    "rounding": 10,
-    "opacity": 0.7,
-    "blur": {
-      "enabled": true
-    },
-    "material": "blur"
-  }
+   "$schema": "https://vicinae.com/schemas/config.json",
+   "font": {
+      "normal": {
+         "family": "Inter"
+      }
+   },
+   "theme": {
+      "dark": {
+         "name": "vicinae-dark",
+         "icon_theme": "auto"
+      }
+   },
+   "launcher_window": {
+      "rounding": 10,
+      "opacity": 0.7,
+      "blur": {
+         "enabled": true
+      },
+      "material": "blur"
+   }
 }

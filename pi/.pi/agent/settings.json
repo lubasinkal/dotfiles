@@ -1,6 +1,6 @@
 {
   "collapseChangelog": true,
-  "defaultModel": "minimax-m3",
+  "defaultModel": "ox-alpha-free",
   "defaultProvider": "opencode-go",
   "defaultThinkingLevel": "high",
   "enableInstallTelemetry": false,
