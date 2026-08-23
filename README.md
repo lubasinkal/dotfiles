@@ -1,96 +1,64 @@
 # Dotfiles
 
-Managed with [GNU Stow](https://www.gnu.org/software/stow/).
+Managed with [GNU Stow](https://www.gnu.org/software/stow/). Each top-level directory is a "package" whose internal structure mirrors your home directory.
 
-## Structure
+## Packages
 
-Each directory in this repository represents a "package" that can be stowed into your home directory. The internal structure of each package mirrors the path in your home directory.
+| Package | Contents |
+|---|---|
+| `doom/` | `.config/doom/` — Doom Emacs config (git submodule → [lubasinkal/doom](https://github.com/lubasinkal/doom)) |
+| `ghostty/` | `.config/ghostty/` — terminal emulator config + theme |
+| `git/` | `.gitconfig` |
+| `herdr/` | `.config/herdr/config.toml` — agent multiplexer config |
+| `niri/` | `.config/niri/config.kdl` — Wayland compositor config |
+| `nvim/` | `.config/nvim/` — Neovim config (git submodule → [lubasinkal/nvim](https://github.com/lubasinkal/nvim)) |
+| `opencode/` | `.config/opencode/opencode.json` — global opencode config (MCP servers, LSP) |
+| `pi/` | `.pi/` — pi coding agent configuration (agents, extensions, prompts) |
+| `starship/` | `.config/starship.toml` |
+| `tmux/` | `.config/tmux/tmux.conf` — Vesper-inspired theme, vim navigation, TPM plugins |
+| `vicinae/` | `.config/vicinae/settings.json` + themes — launcher |
+| `zsh/` | `.zshrc` |
 
-- `bash/`: Contains `.bashrc`, `.bash_profile`, etc.
-- `doom/`: A git submodule containing `.config/doom/`.
-- `git/`: Contains `.gitconfig`.
-- `ghostty/`: Contains `.config/ghostty/`.
-- `herdr/`: Contains `.config/herdr/` — agent multiplexer config.
-- `nvim/`: A git submodule containing `.config/nvim/`.
-- `opencode/`: Contains `.config/opencode/opencode.json` — global opencode config (MCP servers, LSP). Secrets are kept out of git via `{env:VAR}` substitution; see below.
-- `pi/`: Contains `.pi/` — opencode agent configurations.
-- `starship/`: Contains `.config/starship.toml`.
-- `tmux/`: Contains `.config/tmux/tmux.conf` — opinionated config with Vesper-inspired theme, mouse support, vim-style navigation, and TPM plugin manager.
-- `vim/`: Contains `.vimrc` — minimal Vim config inspired by nvim.
-- `walker/`: Contains `.config/walker/`.
-- `wezterm/`: Contains `.wezterm.lua`.
-- `zsh/`: Contains `.zshrc`.
+## Install
 
-## How to use
-
-### To add a new tool (e.g., `tmux`)
-
-1. Create a new directory for the tool:
-   ```bash
-   mkdir -p tmux/.config/tmux
-   ```
-2. Move your existing config files into that directory:
-   ```bash
-   mv ~/.config/tmux ~/dotfiles/tmux/.config/
-   ```
-3. Stow the new package:
-   ```bash
-   cd ~/dotfiles
-   stow tmux
-   ```
-
-### To remove a tool
-
-1. Unstow the package:
-   ```bash
-   cd ~/dotfiles
-   stow -D tmux
-   ```
-2. (Optional) Delete the directory in `dotfiles` if you no longer want to manage it.
-
-## Deployment (New Machine)
-
-To set up these dotfiles on a new machine:
-
-1. Install `stow` and `git`.
-2. Clone this repository recursively (to include submodules):
-   ```bash
-   git clone --recursive https://github.com/lubasinkal/dotfiles.git ~/dotfiles
-   ```
-3. Stow each package:
-   ```bash
-   cd ~/dotfiles
-   stow bash doom git ghostty herdr nvim opencode pi starship tmux vim walker wezterm zsh
-   ```
-
-## OpenCode
-
-`opencode/.config/opencode/opencode.json` holds the global opencode config. Sensitive values
-are referenced as `{env:VAR}` placeholders (e.g. `CONTEXT7_API_KEY`, `N8N_MCP_TOKEN`). On a
-new machine, create the untracked file `~/.config/opencode/secrets.sh` with the real values,
-e.g.:
-
-```sh
-export CONTEXT7_API_KEY="..."
-export N8N_MCP_TOKEN="..."
-```
-
-`.zshrc` sources it automatically if present. Backup of the original config with real secrets
-lives at `/tmp/opencode/opencode.jsonc.bak`.
-
-## Tmux Setup
-
-After stowing, the config references [TPM (Tmux Plugin Manager)](https://github.com/tmux-plugins/tpm) for plugins. On a new machine:
+On a new machine:
 
 ```bash
-# Clone TPM
-git clone https://github.com/tmux-plugins/tpm ~/.config/tmux/plugins/tpm
-
-# Start tmux and install plugins (prefix + I, capital i)
-tmux
-# Then press: Ctrl-b, then Shift-i
+git clone --recursive https://github.com/lubasinkal/dotfiles.git ~/dotfiles
+cd ~/dotfiles
+./install.sh
 ```
 
-## Workflow Tip
+The script restows every package into `$HOME`. To undo everything: `./install.sh --delete`.
 
-Always make sure the files are moved to the `dotfiles` directory *before* running `stow`, or `stow` will try to symlink files that don't exist or might cause conflicts.
+If stow reports a conflict, a real file already exists at the target path — move or delete it first, then re-run.
+
+### Post-install steps
+
+```bash
+# Tmux plugins (TPM)
+git clone https://github.com/tmux-plugins/tpm ~/.config/tmux/plugins/tpm
+tmux   # then press prefix (Ctrl-b) + Shift-i
+
+# Opencode secrets: create an untracked file with real values
+cat > ~/.config/opencode/secrets.sh <<'EOF'
+export CONTEXT7_API_KEY="..."
+export N8N_MCP_TOKEN="..."
+EOF
+```
+
+`.zshrc` sources `~/.config/opencode/secrets.sh` automatically if present. Sensitive values in `opencode.json` are referenced as `{env:VAR}` placeholders.
+
+## Adding a new tool
+
+1. Move its config into a new package, mirroring the home path:
+   ```bash
+   mkdir -p tool/.config/tool
+   mv ~/.config/tool/* tool/.config/tool/
+   ```
+2. Stow it:
+   ```bash
+   cd ~/dotfiles && stow tool
+   ```
+
+To remove one: `stow -D tool`, then delete the directory if desired.

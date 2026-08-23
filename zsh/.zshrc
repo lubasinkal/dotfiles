@@ -1,37 +1,27 @@
-# Portable + fast: every dep guarded, self-contained plugins pre-compiled to bytecode.
-[[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]] && \
-  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+# Portable + fast: every dep guarded.
 
-_zsh_zwc_dir="${XDG_CACHE_HOME:-$HOME/.cache}/zsh-zwc"
-_zsh_zwc_source() {
-  local src="$1" dst
-  [[ -r "$src" ]] || return 0
-  mkdir -p "$_zsh_zwc_dir" 2>/dev/null || return 0
-  dst="$_zsh_zwc_dir/$(basename "$src")"
-  if [[ ! -r "$dst" || "$src" -nt "$dst" ]]; then
-    cp -f "$src" "$dst" 2>/dev/null && zcompile "$dst" 2>/dev/null
-  fi
-  source "$dst"
-}
+# History.
+HISTSIZE=50000
+SAVEHIST=50000
+HISTFILE="$HOME/.zsh_history"
+setopt share_history hist_ignore_all_dups hist_ignore_space hist_reduce_blanks hist_verify
+export HISTORY_IGNORE="(&|[bf]g|c|clear|history|exit|q|pwd|* --help)"
 
-if [[ -r /usr/share/oh-my-zsh/oh-my-zsh.sh ]]; then
-  export ZSH=/usr/share/oh-my-zsh
-  plugins=(git fzf extract)
-  _zsh_zwc_source /usr/share/oh-my-zsh/oh-my-zsh.sh
-  _zsh_zwc_source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
-  _zsh_zwc_source /usr/share/zsh/plugins/zsh-history-substring-search/zsh-history-substring-search.zsh
-  [[ -r /usr/share/zsh-theme-powerlevel10k/powerlevel10k.zsh-theme ]] && \
-    source /usr/share/zsh-theme-powerlevel10k/powerlevel10k.zsh-theme
-  [[ -r /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]] && \
-    source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
-  [[ -r /usr/share/doc/pkgfile/command-not-found.zsh ]] && \
-    source /usr/share/doc/pkgfile/command-not-found.zsh
-  export FZF_BASE=/usr/share/fzf
-fi
+# System plugins (Arch path).
+[[ -r /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh ]] && \
+  source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
+[[ -r /usr/share/zsh/plugins/zsh-history-substring-search/zsh-history-substring-search.zsh ]] && \
+  source /usr/share/zsh/plugins/zsh-history-substring-search/zsh-history-substring-search.zsh
+[[ -r /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]] && \
+  source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+[[ -r /usr/share/doc/pkgfile/command-not-found.zsh ]] && \
+  source /usr/share/doc/pkgfile/command-not-found.zsh
 
-export HISTCONTROL=ignoreboth
-export HISTORY_IGNORE="(\&|[bf]g|c|clear|history|exit|q|pwd|* --help)"
-export PROMPT_COMMAND="history -a; ${PROMPT_COMMAND:-}"
+# fzf key bindings + completion.
+(( $+commands[fzf] )) && eval "$(fzf --zsh)" 2>/dev/null
+
+# Prompt.
+(( $+commands[starship] )) && eval "$(starship init zsh)"
 
 _zsh_path_prepend() { case ":$PATH:" in *":$1:"*) ;; *) export PATH="$1:$PATH" ;; esac; }
 _zsh_path_prepend "$HOME/.local/bin"
@@ -50,4 +40,3 @@ if [[ -r "$HOME/.atuin/bin/env" ]]; then
   (( $+commands[atuin] )) && eval "$(atuin init zsh)"
 fi
 [[ -r "$HOME/.config/opencode/secrets.sh" ]] && source "$HOME/.config/opencode/secrets.sh"
-[[ -r "$HOME/.p10k.zsh" ]] && source "$HOME/.p10k.zsh"
