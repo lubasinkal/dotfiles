@@ -205,7 +205,7 @@ export function relevanceScore(msg: any, keywords: Set<string>): number {
 	return matches / keywords.size;
 }
 
-function getMessageText(msg: any): string {
+export function getMessageText(msg: any): string {
 	if (!msg || typeof msg !== "object") return "";
 	const content = msg.content;
 	if (typeof content === "string") return content;

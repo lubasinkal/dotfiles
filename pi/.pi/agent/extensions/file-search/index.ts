@@ -1,13 +1,15 @@
 /**
- * file-search — first-class `fd` and `rg` tools for pi.
+ * file-search — first-class `fd` tool for pi.
  *
- * Registers two tools:
+ * Registers one tool:
  *   fd — find files/directories by name with fd (fast, gitignore-aware)
- *   rg — search file contents with ripgrep (regex content search)
  *
- * Uses system `fd`/`rg` binaries from PATH. If not installed, tools
- * report a clear error. Output is truncated to 2000 lines/50KB with
- * full output saved to a temp file when cut off.
+ * Content search lives in the snippet tool (lib/snippet.ts); raw rg
+ * remains available via bash when needed.
+ *
+ * Uses system `fd` binary from PATH. If not installed, the tool reports
+ * a clear error. Output is truncated to 2000 lines/50KB with full output
+ * saved to a temp file when cut off.
  *
  * Install: copy to ~/.pi/agent/extensions/file-search.ts, then /reload.
  */
@@ -28,10 +30,6 @@ const execFileAsync = promisify(execFile);
 const FD_MAX_RESULTS = 10_000;
 const FD_DEFAULT_LIMIT = 1000;
 const FD_MAX_DEPTH = 64;
-
-const RG_MAX_COUNT = 1000;
-const RG_DEFAULT_LIMIT = 100;
-const RG_MAX_CONTEXT = 20;
 
 const MAX_OUTPUT_BYTES = 50_000; // ~50KB
 const MAX_OUTPUT_LINES = 2000;
@@ -142,54 +140,6 @@ function buildFdArgs(params: Record<string, unknown>): string[] {
   return args;
 }
 
-// ── rg ──────────────────────────────────────────────────────────────────
-
-function buildRgArgs(params: Record<string, unknown>): string[] {
-  const args = [
-    "--line-number",
-    "--color=never",
-    "--no-heading",
-    "--with-filename",
-  ];
-  if (params.case_sensitive === true) args.push("--case-sensitive");
-  else if (params.case_sensitive === false) args.push("--ignore-case");
-  else args.push("--smart-case");
-  if (params.fixed_strings) args.push("--fixed-strings");
-  if (params.hidden) args.push("--hidden");
-  if (
-    params.context !== undefined &&
-    typeof params.context === "number"
-  ) {
-    args.push(
-      "--context",
-      String(clamp(params.context, 0, RG_MAX_CONTEXT)),
-    );
-  }
-  if (params.glob && typeof params.glob === "string") {
-    args.push("--glob", params.glob);
-  }
-  if (params.file_type && typeof params.file_type === "string") {
-    args.push("--type", params.file_type);
-  }
-  args.push(
-    "--max-count",
-    String(
-      clamp(
-        typeof params.limit === "number" ? params.limit : RG_DEFAULT_LIMIT,
-        1,
-        RG_MAX_COUNT,
-      ),
-    ),
-  );
-  // pattern (required)
-  args.push("--", String(params.pattern ?? ""));
-  // path
-  if (params.path && typeof params.path === "string") {
-    args.push(params.path);
-  }
-  return args;
-}
-
 // ── Execute helper ──────────────────────────────────────────────────────
 
 async function runTool(
@@ -265,7 +215,7 @@ export default function fileSearch(pi: ExtensionAPI) {
       "Find files and directories by name with fd (fast, gitignore-aware).",
     promptGuidelines: [
       "Use fd as the primary tool for discovering files and directories by name, extension, or glob instead of bash with find or ls -R.",
-      "Use rg instead of fd when searching file contents rather than file names.",
+      "Use the snippet tool instead of fd when searching file contents rather than file names.",
       "Keep using bash for complex multi-step workflows that pipe or post-process file listings.",
     ],
     parameters: Type.Object({
@@ -368,123 +318,4 @@ export default function fileSearch(pi: ExtensionAPI) {
     },
   });
 
-  // ── rg tool ──────────────────────────────────────────────────────────
-
-  pi.registerTool({
-    name: "rg",
-    label: "Search Content",
-    description:
-      "Search file contents with ripgrep. Uses smart-case matching, respects .gitignore by default, and returns at most 100 matches per file unless a different limit is given. Output is limited to 2000 lines or 50KB; complete truncated output is saved to a temporary file.\n\nExamples (tool params):\n- { pattern: \"TODO|FIXME\" } — find todos (smart-case)\n- { pattern: \"a.b(c)\", fixed_strings: true } — literal match, no escaping needed\n- { pattern: \"export (async )?function\", glob: \"*.ts\" } — TS function declarations\n- { pattern: \"error\", path: \"src\", context: 3, limit: 50 } — with surrounding lines\n- { pattern: \"process(\", file_type: \"ts\" } — filter by file type\n- { case_sensitive: true, pattern: \"User\" } — exact case",
-    promptSnippet:
-      "Search file contents with ripgrep (fast regex content search).",
-    promptGuidelines: [
-      "Use rg as the primary tool for searching file contents instead of bash with grep.",
-      "Use fd instead of rg when looking for files by name rather than content.",
-      "Set fixed_strings on rg when searching for literal code snippets containing regex metacharacters.",
-      "Use snippet for code discovery when you only need match-centered one-liners; use rg when you need full context, glob filtering, or file type filtering.",
-      "Keep using bash for complex multi-step workflows that combine searching with other commands.",
-    ],
-    parameters: Type.Object({
-      pattern: Type.String({
-        description:
-          "Regex to search for (literal text when fixed_strings is true).",
-      }),
-      path: Type.Optional(
-        Type.String({
-          description:
-            "File or directory to search. Defaults to the current working directory.",
-        }),
-      ),
-      glob: Type.Optional(
-        Type.String({
-          description:
-            "Only search files matching this glob, e.g. '*.ts' or 'src/**'.",
-        }),
-      ),
-      file_type: Type.Optional(
-        Type.String({
-          description:
-            "Only search files of this ripgrep type, e.g. 'ts', 'js', 'py', 'rust'.",
-        }),
-      ),
-      case_sensitive: Type.Optional(
-        Type.Boolean({
-          description:
-            "true forces case-sensitive matching, false forces case-insensitive. Defaults to smart-case.",
-        }),
-      ),
-      fixed_strings: Type.Optional(
-        Type.Boolean({
-          description:
-            "Treat pattern as a literal string instead of a regex.",
-        }),
-      ),
-      hidden: Type.Optional(
-        Type.Boolean({
-          description:
-            "Search hidden files and directories. Defaults to false.",
-        }),
-      ),
-      context: Type.Optional(
-        Type.Number({
-          description: "Lines of context to show around each match (0-20).",
-        }),
-      ),
-      limit: Type.Optional(
-        Type.Number({
-          description: "Maximum matches per file (1-1000). Defaults to 100.",
-        }),
-      ),
-    }),
-    executionMode: "sequential",
-
-    async execute(_id, params, signal, _onUpdate, ctx) {
-      if (signal?.aborted) {
-        return {
-          content: [{ type: "text", text: "rg search cancelled." }],
-          details: {},
-        };
-      }
-
-      const args = buildRgArgs(params as Record<string, unknown>);
-      const output = await runTool("rg", args, ctx.cwd, "pi-rg-");
-
-      return {
-        content: [{ type: "text", text: output.text }],
-        details: {
-          outputLines: output.lineCount,
-          truncated: output.truncated,
-          fullOutputPath: output.fullOutputPath,
-        },
-      };
-    },
-
-    renderCall(args, theme, _context) {
-      const pattern =
-        typeof args.pattern === "string" ? args.pattern : "";
-      const path = args.path ? ` in ${args.path}` : "";
-      let text =
-        theme.fg("toolTitle", theme.bold("rg ")) +
-        theme.fg("muted", `"${pattern.slice(0, 60)}"${path}`);
-      if (args.glob) text += theme.fg("dim", ` [${args.glob}]`);
-      return new Text(text, 0, 0);
-    },
-
-    renderResult(result, _options, theme, _context) {
-      const details = result.details as {
-        outputLines?: number;
-        truncated?: boolean;
-      };
-      const lines =
-        details?.outputLines !== undefined
-          ? `${details.outputLines} lines`
-          : "?";
-      const suffix = details?.truncated ? " (truncated)" : "";
-      return new Text(
-        theme.fg("success", lines) + theme.fg("dim", suffix),
-        0,
-        0,
-      );
-    },
-  });
 }

@@ -6,13 +6,28 @@
  * - debugger statements
  * - @ts-ignore (should use @ts-expect-error)
  * - console.log left in code
+ *
+ * Only runs the diff when an edit/write actually happened this turn.
  */
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { execSync } from "node:child_process";
 
+const EDIT_TOOLS = new Set(["edit", "write"]);
+
 export default function (pi: ExtensionAPI) {
+  let editedThisTurn = false;
+
+  pi.on("tool_call", async (event) => {
+    if (EDIT_TOOLS.has(event.toolName)) {
+      editedThisTurn = true;
+    }
+  });
+
   pi.on("agent_end", async (_event, ctx) => {
+    if (!editedThisTurn) return;
+    editedThisTurn = false;
+
     try {
       const diff = execSync(
         "git diff --unified=0 --no-color HEAD 2>/dev/null || echo ''",

@@ -53,6 +53,7 @@ import {
 	messageCharCount,
 	pruneToolResultBlock,
 	extractKeywords,
+	getMessageText,
 	relevanceScore,
 } from "./helpers.js";
 
@@ -71,7 +72,13 @@ export default function (pi: ExtensionAPI) {
 			totalChars += messageCharCount(msg);
 		}
 		const estimatedTokens = estimateTokens(totalChars);
-		const budgetTokens = Math.floor(settings.contextLimitTokens * settings.budgetThreshold);
+		// Prefer the live model's context window; fall back to the default.
+		const modelWindow = (ctx as any)?.model?.contextWindow;
+		const contextLimit =
+			typeof modelWindow === "number" && modelWindow > 0
+				? modelWindow
+				: settings.contextLimitTokens;
+		const budgetTokens = Math.floor(contextLimit * settings.budgetThreshold);
 		const overBudget = estimatedTokens > budgetTokens;
 
 		// ── Extract keywords from latest user message for relevance scoring ──
@@ -303,22 +310,6 @@ function getThresholdForTool(toolName: string, settings: typeof DEFAULTS): numbe
 	if (SEARCH_TOOLS.has(toolName)) return Math.floor(settings.maxToolResultChars * 0.5); // searches are ephemeral
 	if (CRITICAL_TOOLS.has(toolName)) return settings.maxDiffResultChars * 2; // keep more for critical tools
 	return settings.maxToolResultChars;
-}
-
-function getMessageText(msg: any): string {
-	if (!msg || typeof msg !== "object") return "";
-	const content = msg.content;
-	if (typeof content === "string") return content;
-	if (Array.isArray(content)) {
-		return content
-			.map((b: any) => {
-				if (typeof b === "string") return b;
-				if (b?.type === "text" && typeof b.text === "string") return b.text;
-				return "";
-			})
-			.join("\n");
-	}
-	return "";
 }
 
 function formatBytes(chars: number): string {

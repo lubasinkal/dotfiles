@@ -11,12 +11,18 @@
  *   or use ctx_execute_file (which processes data in a sandbox without
  *   sending raw bytes to the LLM)
  *
+ * When a read is clamped, a truncation notice is appended so the model knows
+ * to continue with offset= instead of assuming it saw the whole file.
+ *
  * Install: copy to ~/.pi/agent/extensions/read-cap/
  * Configure: change MAX_LINES below or via settings.json (readCap.maxLines)
  */
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { isToolCallEventType } from "@earendil-works/pi-coding-agent";
+import {
+	isReadToolResult,
+	isToolCallEventType,
+} from "@earendil-works/pi-coding-agent";
 
 const MAX_LINES = 250;
 
@@ -31,11 +37,31 @@ export default function (pi: ExtensionAPI) {
 		if (currentLimit === undefined || currentLimit > MAX_LINES) {
 			event.input.limit = MAX_LINES;
 		}
+	});
 
-		// For files that are obviously data (logs, CSVs, JSON) or when
-		// the model requests more than MAX_LINES without offset, nudge
-		// toward ctx_execute_file for analysis.
-		// (The nudge is implicit — by capping the limit, the model
-		// learns to use chunked reads or sandbox tools.)
+	// Append a notice when output was clamped, so the model knows there may
+	// be more file content and can continue with offset=.
+	pi.on("tool_result", async (event, _ctx) => {
+		if (!isReadToolResult(event)) return;
+		const content = event.content;
+		if (!Array.isArray(content)) return;
+
+		let mutated = false;
+		for (const block of content) {
+			if (
+				!block ||
+				typeof block !== "object" ||
+				block.type !== "text" ||
+				typeof block.text !== "string"
+			) {
+				continue;
+			}
+			const lineCount = block.text.split("\n").length;
+			if (lineCount >= MAX_LINES && !block.text.includes("(truncated")) {
+				block.text += `\n(truncated at ${MAX_LINES} lines; use offset= to continue)`;
+				mutated = true;
+			}
+		}
+		if (mutated) return { content };
 	});
 }
