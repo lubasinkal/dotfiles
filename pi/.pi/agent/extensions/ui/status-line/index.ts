@@ -2,12 +2,12 @@
  * Minimal Status Line Extension
  *
  * Clean footer inspired by statusline.nvim:
- * Left: ctx bar | tokens ↑↓ | cost
- * Right: branch · model (✻ thinking)
+ * Left: directory (branch) | tokens ↑↓ | cost
+ * Right: model (✻ thinking)
  */
 
 import type { AssistantMessage } from "@earendil-works/pi-ai";
-import type { ExtensionAPI, ThemeColor } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 
 /** Incrementally cached token/cost totals for the current branch. */
@@ -41,31 +41,11 @@ function branchTotals(branch: readonly unknown[]) {
 	return c;
 }
 
-// ── Context bar ──────────────────────────────────────────────────────────
+// ── Helpers ──────────────────────────────────────────────────────────────
 
-const BAR_WIDTH = 12;
-// Eighth-block glyphs for sub-cell precision.
-const FRACTIONS = ["▏", "▎", "▍", "▌", "▋", "▊", "▉"];
-
-type FgFn = (color: ThemeColor, text: string) => string;
-
-function renderBar(pct: number, fg: FgFn): string {
-	const clamped = Math.min(100, Math.max(0, pct));
-	const exact = (clamped / 100) * BAR_WIDTH;
-	let out = fg("border", "▐");
-	for (let i = 0; i < BAR_WIDTH; i++) {
-		const cell = (exact - i) * 8; // eighths filled in this cell
-		if (cell <= 0) {
-			out += fg("border", "░");
-		} else {
-			const zonePct = ((i + 0.5) / BAR_WIDTH) * 100;
-			const color: ThemeColor = zonePct >= 80 ? "error" : zonePct >= 60 ? "warning" : "accent";
-			const eighths = Math.min(8, Math.max(1, Math.round(cell)));
-			const glyph = eighths >= 8 ? "█" : FRACTIONS[eighths - 1];
-			out += fg(color, glyph);
-		}
-	}
-	return out + fg("border", "▌");
+function shortenCwd(cwd: string): string {
+	const home = process.env.HOME ?? cwd;
+	return cwd === home || cwd.startsWith(home + "/") ? `~${cwd.slice(home.length)}` : cwd;
 }
 
 export default function (pi: ExtensionAPI) {
@@ -85,25 +65,20 @@ export default function (pi: ExtensionAPI) {
 						n < 1000 ? `${n}` : n < 1_000_000 ? `${(n / 1000).toFixed(1)}k` : `${(n / 1_000_000).toFixed(1)}M`;
 					const fmtCost = (n: number) => (n >= 100 ? `$${(n / 1000).toFixed(2)}k` : `$${n.toFixed(2)}`);
 
-					// Left: [ctx bar] pct% · ↑in ↓out · $cost
+					// Left: directory (branch) · ↑in ↓out · $cost
 					const leftParts: string[] = [];
 
-					// Context bar: fixed 12 cells, eighth-block precision, per-zone color.
-					const ctxUsage = ctx.getContextUsage();
-					if (ctxUsage && ctxUsage.tokens !== null) {
-						const pct = ctxUsage.percent ?? 0;
-						leftParts.push(renderBar(pct, (color, text) => theme.fg(color, text)) + theme.fg("dim", ` ${pct.toFixed(0)}%`));
-					}
+					leftParts.push(theme.fg("accent", shortenCwd(ctx.cwd)));
+					const branch = footerData.getGitBranch();
+					if (branch) leftParts.push(theme.fg("dim", `(${branch})`));
 
 					leftParts.push(theme.fg("dim", `↑`) + theme.fg("accent", fmt(input)) + theme.fg("dim", " ↓") + theme.fg("accent", fmt(output)));
 					if (cost > 0) leftParts.push(theme.fg("success", fmtCost(cost)));
 
 					const left = leftParts.join(theme.fg("border", " · "));
 
-					// Right: branch · model · ✻ thinking — each part themed individually
+					// Right: model · ✻ thinking — each part themed individually
 					const rightParts: string[] = [];
-					const branch = footerData.getGitBranch();
-					if (branch) rightParts.push(theme.fg("dim", branch));
 					const model = ctx.model?.id || "—";
 					const provider = ctx.model?.provider || "";
 					rightParts.push(theme.fg("dim", provider ? `${provider}/${model}` : model));
