@@ -1,45 +1,16 @@
 /**
- * Minimal Status Line Extension
+ * Status Line Extension
  *
- * Clean footer inspired by statusline.nvim:
- * Left: ctx bar | tokens ↑↓ | cost
- * Right: branch · model (✻ thinking)
+ * Keeps pi's default footer (cwd, branch, tokens, cache hit %, cost, ctx%,
+ * auto-compact indicator) and injects two extra status chips into it:
+ *   - "ctx": eighth-block context-usage bar with per-zone coloring
+ *   - "thinking": ✻ + current thinking level
+ *
+ * Chips refresh on turn/message/compaction events — exactly when context
+ * usage changes.
  */
 
-import type { AssistantMessage } from "@earendil-works/pi-ai";
 import type { ExtensionAPI, ThemeColor } from "@earendil-works/pi-coding-agent";
-import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
-
-/** Incrementally cached token/cost totals for the current branch. */
-const cache = {
-	head: [] as unknown[], // snapshot of already-summed branch entries
-	input: 0,
-	output: 0,
-	cost: 0,
-};
-
-function branchTotals(branch: readonly unknown[]) {
-	const c = cache;
-	// Reuse the cached prefix when the branch only grew (common case).
-	const reusable = Math.min(c.head.length, branch.length);
-	let m = 0;
-	while (m < reusable && branch[m] === c.head[m]) m++;
-	if (!(m === c.head.length && c.head.length <= branch.length)) {
-		// Branch changed underneath us (switch/fork/compaction) — full rescan.
-		c.input = c.output = c.cost = 0;
-		m = 0;
-	}
-	for (let i = m; i < branch.length; i++) {
-		const e = branch[i] as { type: string; message?: { role: string; usage?: AssistantMessage["usage"] } };
-		if (e.type === "message" && e.message?.role === "assistant" && e.message.usage) {
-			c.input += e.message.usage.input ?? 0;
-			c.output += e.message.usage.output ?? 0;
-			c.cost += e.message.usage.cost.total ?? 0;
-		}
-	}
-	c.head = branch.slice();
-	return c;
-}
 
 // ── Context bar ──────────────────────────────────────────────────────────
 
@@ -58,6 +29,7 @@ function renderBar(pct: number, fg: FgFn): string {
 		if (cell <= 0) {
 			out += fg("border", "░");
 		} else {
+			// Color by the zone this cell sits in, so red creeps in from the right.
 			const zonePct = ((i + 0.5) / BAR_WIDTH) * 100;
 			const color: ThemeColor = zonePct >= 80 ? "error" : zonePct >= 60 ? "warning" : "accent";
 			const eighths = Math.min(8, Math.max(1, Math.round(cell)));
@@ -68,57 +40,37 @@ function renderBar(pct: number, fg: FgFn): string {
 	return out + fg("border", "▌");
 }
 
+// ── Extension ────────────────────────────────────────────────────────────
+
+interface UiCtx {
+	ui: {
+		theme: { fg: (color: ThemeColor, text: string) => string };
+		setStatus: (key: string, value: string | undefined) => void;
+	};
+	getContextUsage(): { percent: number | null; tokens: number | null } | undefined;
+	thinkingLevel?: string;
+}
+
 export default function (pi: ExtensionAPI) {
-	pi.on("session_start", async (_event, ctx) => {
+	function refresh(ctx: UiCtx) {
 		const theme = ctx.ui.theme;
 
-		ctx.ui.setFooter((tui, _theme, footerData) => {
-			const unsub = footerData.onBranchChange(() => tui.requestRender());
+		const usage = ctx.getContextUsage();
+		if (usage && usage.tokens !== null) {
+			const pct = usage.percent ?? 0;
+			ctx.ui.setStatus("ctx", renderBar(pct, (color, text) => theme.fg(color, text)) + theme.fg("dim", ` ${pct.toFixed(0)}%`));
+		} else {
+			// Unknown until the next response (fresh session / just compacted).
+			ctx.ui.setStatus("ctx", undefined);
+		}
 
-			return {
-				dispose: unsub,
-				invalidate() {},
-				render(width: number): string[] {
-					const { input, output, cost } = branchTotals(ctx.sessionManager.getBranch());
+		const thinking = ctx.thinkingLevel;
+		ctx.ui.setStatus("thinking", thinking && thinking !== "off" ? theme.fg("warning", `✻ ${thinking}`) : undefined);
+	}
 
-					const fmt = (n: number) =>
-						n < 1000 ? `${n}` : n < 1_000_000 ? `${(n / 1000).toFixed(1)}k` : `${(n / 1_000_000).toFixed(1)}M`;
-					const fmtCost = (n: number) => (n >= 100 ? `$${(n / 1000).toFixed(2)}k` : `$${n.toFixed(2)}`);
-
-					// Left: [ctx bar] pct% · ↑in ↓out · $cost
-					const leftParts: string[] = [];
-
-					// Context bar: fixed 12 cells, eighth-block precision, per-zone color.
-					const ctxUsage = ctx.getContextUsage();
-					if (ctxUsage && ctxUsage.tokens !== null) {
-						const pct = ctxUsage.percent ?? 0;
-						leftParts.push(renderBar(pct, (color, text) => theme.fg(color, text)) + theme.fg("dim", ` ${pct.toFixed(0)}%`));
-					}
-
-					leftParts.push(theme.fg("dim", `↑`) + theme.fg("accent", fmt(input)) + theme.fg("dim", " ↓") + theme.fg("accent", fmt(output)));
-					if (cost > 0) leftParts.push(theme.fg("success", fmtCost(cost)));
-
-					const left = leftParts.join(theme.fg("border", " · "));
-
-					// Right: branch · model · ✻ thinking — each part themed individually
-					const rightParts: string[] = [];
-					const branch = footerData.getGitBranch();
-					if (branch) rightParts.push(theme.fg("dim", branch));
-					const model = ctx.model?.id || "—";
-					const provider = ctx.model?.provider || "";
-					rightParts.push(theme.fg("dim", provider ? `${provider}/${model}` : model));
-					const thinking = ctx.thinkingLevel;
-					if (thinking && thinking !== "off") rightParts.push(theme.fg("warning", `✻ ${thinking}`));
-
-					const right = rightParts.join(theme.fg("border", " · "));
-
-					// Layout: left [gap] right
-					const leftWidth = visibleWidth(left);
-					const rightWidth = visibleWidth(right);
-					const gap = Math.max(1, width - leftWidth - rightWidth);
-					return [truncateToWidth(left + " ".repeat(gap) + right, width)];
-				},
-			};
-		});
-	});
+	// Register at top level so re-sessions don't stack duplicate handlers.
+	pi.on("session_start", async (_event, ctx) => refresh(ctx));
+	pi.on("message_end", async (_event, ctx) => refresh(ctx));
+	pi.on("turn_end", async (_event, ctx) => refresh(ctx));
+	pi.on("session_compact", async (_event, ctx) => refresh(ctx));
 }
