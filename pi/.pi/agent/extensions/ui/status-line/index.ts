@@ -7,7 +7,7 @@
  */
 
 import type { AssistantMessage } from "@earendil-works/pi-ai";
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI, ThemeColor } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 
 /** Incrementally cached token/cost totals for the current branch. */
@@ -41,6 +41,33 @@ function branchTotals(branch: readonly unknown[]) {
 	return c;
 }
 
+// ── Context bar ──────────────────────────────────────────────────────────
+
+const BAR_WIDTH = 12;
+// Eighth-block glyphs for sub-cell precision.
+const FRACTIONS = ["▏", "▎", "▍", "▌", "▋", "▊", "▉"];
+
+type FgFn = (color: ThemeColor, text: string) => string;
+
+function renderBar(pct: number, fg: FgFn): string {
+	const clamped = Math.min(100, Math.max(0, pct));
+	const exact = (clamped / 100) * BAR_WIDTH;
+	let out = fg("border", "▐");
+	for (let i = 0; i < BAR_WIDTH; i++) {
+		const cell = (exact - i) * 8; // eighths filled in this cell
+		if (cell <= 0) {
+			out += fg("border", "░");
+		} else {
+			const zonePct = ((i + 0.5) / BAR_WIDTH) * 100;
+			const color: ThemeColor = zonePct >= 80 ? "error" : zonePct >= 60 ? "warning" : "accent";
+			const eighths = Math.min(8, Math.max(1, Math.round(cell)));
+			const glyph = eighths >= 8 ? "█" : FRACTIONS[eighths - 1];
+			out += fg(color, glyph);
+		}
+	}
+	return out + fg("border", "▌");
+}
+
 export default function (pi: ExtensionAPI) {
 	pi.on("session_start", async (_event, ctx) => {
 		const theme = ctx.ui.theme;
@@ -61,13 +88,11 @@ export default function (pi: ExtensionAPI) {
 					// Left: [ctx bar] pct% · ↑in ↓out · $cost
 					const leftParts: string[] = [];
 
+					// Context bar: fixed 12 cells, eighth-block precision, per-zone color.
 					const ctxUsage = ctx.getContextUsage();
 					if (ctxUsage && ctxUsage.tokens !== null) {
 						const pct = ctxUsage.percent ?? 0;
-						const color = pct > 80 ? "error" : pct > 60 ? "warning" : "accent";
-						const filled = Math.round((pct / 100) * 10);
-						const bar = "█".repeat(filled) + "░".repeat(10 - filled);
-						leftParts.push(theme.fg(color, `▐${bar}▌ ${pct.toFixed(0)}%`));
+						leftParts.push(renderBar(pct, theme.fg) + theme.fg("dim", ` ${pct.toFixed(0)}%`));
 					}
 
 					leftParts.push(theme.fg("dim", `↑`) + theme.fg("accent", fmt(input)) + theme.fg("dim", " ↓") + theme.fg("accent", fmt(output)));
