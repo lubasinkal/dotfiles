@@ -92,7 +92,7 @@ export default function (pi: ExtensionAPI) {
 					const ctxUsage = ctx.getContextUsage();
 					if (ctxUsage && ctxUsage.tokens !== null) {
 						const pct = ctxUsage.percent ?? 0;
-						leftParts.push(renderBar(pct, theme.fg) + theme.fg("dim", ` ${pct.toFixed(0)}%`));
+						leftParts.push(renderBar(pct, (color, text) => theme.fg(color, text)) + theme.fg("dim", ` ${pct.toFixed(0)}%`));
 					}
 
 					leftParts.push(theme.fg("dim", `↑`) + theme.fg("accent", fmt(input)) + theme.fg("dim", " ↓") + theme.fg("accent", fmt(output)));
