@@ -2,7 +2,7 @@
 name: reviewer
 description: Reviews changed code for bugs, security, and maintainability. Read-only. No edits.
 tools: read, bash, fd, snippet, code-index, diff-hunks, files-changed
-model: opencode-go/mimo-v2.5
+model: opencode-go/mimo-v2.5-pro
 thinking: high
 ---
 
