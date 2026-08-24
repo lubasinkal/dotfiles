@@ -10,9 +10,11 @@
 
 {
    "$schema": "https://vicinae.com/schemas/config.json",
+   "close_on_focus_loss": true,
+   "escape_key_behavior": "close_window",
    "font": {
       "normal": {
-         "family": "Inter"
+         "family": "SpaceMono Nerd Font [NONE]"
       }
    },
    "theme": {
@@ -23,9 +25,12 @@
    },
    "launcher_window": {
       "rounding": 10,
-      "opacity": 0.7,
+      "opacity": 0.4,
       "blur": {
          "enabled": true
+      },
+      "compact_mode": {
+         "enabled": false
       },
       "material": "blur"
    }
