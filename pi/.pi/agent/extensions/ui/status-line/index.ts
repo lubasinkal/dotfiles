@@ -2,19 +2,17 @@
  * Status Line Extension
  *
  * Keeps pi's default footer (cwd, branch, tokens, cache hit %, cost, ctx%,
- * auto-compact indicator) and injects two extra status chips into it:
- *   - "ctx": eighth-block context-usage bar with per-zone coloring
- *   - "thinking": ✻ + current thinking level
- *
- * Chips refresh on turn/message/compaction events — exactly when context
- * usage changes.
+ * model • thinking, auto-compact indicator) and adds one status line:
+ * a wide eighth-block context-usage bar with per-zone coloring and a
+ * "free tokens" readout. Refreshes on turn/message/compaction events.
  */
 
 import type { ExtensionAPI, ThemeColor } from "@earendil-works/pi-coding-agent";
 
 // ── Context bar ──────────────────────────────────────────────────────────
 
-const BAR_WIDTH = 12;
+// Wide enough to own the status line without looking lost.
+const BAR_WIDTH = 24;
 // Eighth-block glyphs for sub-cell precision.
 const FRACTIONS = ["▏", "▎", "▍", "▌", "▋", "▊", "▉"];
 
@@ -40,6 +38,12 @@ function renderBar(pct: number, fg: FgFn): string {
 	return out + fg("border", "▌");
 }
 
+function fmtTokens(n: number): string {
+	if (n < 1000) return `${n}`;
+	if (n < 1_000_000) return `${(n / 1000).toFixed(0)}k`;
+	return `${(n / 1_000_000).toFixed(1)}M`;
+}
+
 // ── Extension ────────────────────────────────────────────────────────────
 
 interface UiCtx {
@@ -47,8 +51,7 @@ interface UiCtx {
 		theme: { fg: (color: ThemeColor, text: string) => string };
 		setStatus: (key: string, value: string | undefined) => void;
 	};
-	getContextUsage(): { percent: number | null; tokens: number | null } | undefined;
-	thinkingLevel?: string;
+	getContextUsage(): { percent: number | null; tokens: number | null; contextWindow?: number } | undefined;
 }
 
 export default function (pi: ExtensionAPI) {
@@ -56,16 +59,18 @@ export default function (pi: ExtensionAPI) {
 		const theme = ctx.ui.theme;
 
 		const usage = ctx.getContextUsage();
-		if (usage && usage.tokens !== null) {
+		if (usage && usage.tokens !== null && usage.contextWindow) {
 			const pct = usage.percent ?? 0;
-			ctx.ui.setStatus("ctx", renderBar(pct, (color, text) => theme.fg(color, text)) + theme.fg("dim", ` ${pct.toFixed(0)}%`));
+			const free = fmtTokens(usage.contextWindow - usage.tokens);
+			ctx.ui.setStatus(
+				"ctx",
+				renderBar(pct, (color, text) => theme.fg(color, text)) +
+					theme.fg("dim", ` ${pct.toFixed(0)}% · ${free} free`),
+			);
 		} else {
 			// Unknown until the next response (fresh session / just compacted).
 			ctx.ui.setStatus("ctx", undefined);
 		}
-
-		const thinking = ctx.thinkingLevel;
-		ctx.ui.setStatus("thinking", thinking && thinking !== "off" ? theme.fg("warning", `✻ ${thinking}`) : undefined);
 	}
 
 	// Register at top level so re-sessions don't stack duplicate handlers.
