@@ -1,7 +1,7 @@
 ---
 name: scout
 description: Fast codebase recon. Returns file:line-cited findings for handoff to other agents.
-tools: read, rg, fd, snippet, code-index, files-changed, diff-hunks
+tools: read, fd, snippet, code-index, files-changed, diff-hunks
 model: opencode-go/mimo-v2.5
 thinking: low
 ---

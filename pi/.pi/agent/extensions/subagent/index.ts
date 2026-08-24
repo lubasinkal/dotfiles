@@ -32,6 +32,7 @@ const MAX_PARALLEL_TASKS = 8;
 const MAX_CONCURRENCY = 4;
 const COLLAPSED_ITEM_COUNT = 10;
 const PER_TASK_OUTPUT_CAP = 50 * 1024;
+const STDERR_CAP = 64 * 1024;
 
 function formatTokens(count: number): string {
 	if (count < 1000) return count.toString();
@@ -124,6 +125,35 @@ function formatToolCall(
 				themeFg("muted", "grep ") +
 				themeFg("accent", `/${pattern}/`) +
 				themeFg("dim", ` in ${shortenPath(rawPath)}`)
+			);
+		}
+		case "fd": {
+			const pattern = (args.pattern || "") as string;
+			const rawPath = (args.path || ".") as string;
+			return (
+				themeFg("muted", "fd ") +
+				themeFg("accent", pattern || "*") +
+				themeFg("dim", ` in ${shortenPath(rawPath)}`)
+			);
+		}
+		case "snippet": {
+			const query = (args.query || "") as string;
+			const rawPath = (args.path || ".") as string;
+			return (
+				themeFg("muted", "snippet ") +
+				themeFg("accent", `/${query}/`) +
+				themeFg("dim", ` in ${shortenPath(rawPath)}`)
+			);
+		}
+		case "code-index": {
+			const query = (args.query || "") as string;
+			return themeFg("muted", "code-index ") + themeFg("accent", query || "(summary)");
+		}
+		case "diff-hunks": {
+			const paths = args.paths as string[] | undefined;
+			return (
+				themeFg("muted", "diff-hunks ") +
+				themeFg("dim", paths?.length ? paths.join(", ") : "(working tree)")
 			);
 		}
 		default: {
@@ -388,7 +418,11 @@ async function runSingleAgent(
 			});
 
 			proc.stderr.on("data", (data) => {
+				if (currentResult.stderr.length >= STDERR_CAP) return;
 				currentResult.stderr += data.toString();
+				if (currentResult.stderr.length > STDERR_CAP) {
+					currentResult.stderr = currentResult.stderr.slice(0, STDERR_CAP) + "\n[stderr truncated]";
+				}
 			});
 
 			proc.on("close", (code) => {
@@ -403,11 +437,16 @@ async function runSingleAgent(
 			});
 
 			if (signal) {
+				let exited = false;
+				proc.on("close", () => {
+					exited = true;
+				});
 				const killProc = () => {
 					wasAborted = true;
 					proc.kill("SIGTERM");
 					setTimeout(() => {
-						if (!proc.killed) proc.kill("SIGKILL");
+						// proc.killed is true immediately after SIGTERM; track real exit instead.
+						if (!exited) proc.kill("SIGKILL");
 					}, 5000);
 				};
 				if (signal.aborted) killProc();
@@ -762,6 +801,26 @@ export default function (pi: ExtensionAPI) {
 
 			const mdTheme = getMarkdownTheme();
 
+			const toolCallLine = (name: string, args: Record<string, unknown>) =>
+				theme.fg("muted", "→ ") + formatToolCall(name, args, theme.fg.bind(theme));
+
+			// Shared tail for expanded views: tool calls, markdown output, usage line.
+			const appendOutput = (container: Container, r: SingleResult) => {
+				for (const item of getDisplayItems(r.messages)) {
+					if (item.type === "toolCall") container.addChild(new Text(toolCallLine(item.name, item.args), 0, 0));
+				}
+				const finalOutput = getFinalOutput(r.messages);
+				if (finalOutput) {
+					container.addChild(new Spacer(1));
+					container.addChild(new Markdown(finalOutput.trim(), 0, 0, mdTheme));
+				}
+				const usageStr = formatUsageStats(r.usage, r.model);
+				if (usageStr) {
+					container.addChild(new Spacer(1));
+					container.addChild(new Text(theme.fg("dim", usageStr), 0, 0));
+				}
+			};
+
 			const renderDisplayItems = (items: DisplayItem[], limit?: number) => {
 				const toShow = limit ? items.slice(-limit) : items;
 				const skipped = limit && items.length > limit ? items.length - limit : 0;
@@ -800,25 +859,7 @@ export default function (pi: ExtensionAPI) {
 					if (displayItems.length === 0 && !finalOutput) {
 						container.addChild(new Text(theme.fg("muted", "(no output)"), 0, 0));
 					} else {
-						for (const item of displayItems) {
-							if (item.type === "toolCall")
-								container.addChild(
-									new Text(
-										theme.fg("muted", "→ ") + formatToolCall(item.name, item.args, theme.fg.bind(theme)),
-										0,
-										0,
-									),
-								);
-						}
-						if (finalOutput) {
-							container.addChild(new Spacer(1));
-							container.addChild(new Markdown(finalOutput.trim(), 0, 0, mdTheme));
-						}
-					}
-					const usageStr = formatUsageStats(r.usage, r.model);
-					if (usageStr) {
-						container.addChild(new Spacer(1));
-						container.addChild(new Text(theme.fg("dim", usageStr), 0, 0));
+						appendOutput(container, r);
 					}
 					return container;
 				}
@@ -868,8 +909,6 @@ export default function (pi: ExtensionAPI) {
 
 					for (const r of details.results) {
 						const rIcon = r.exitCode === 0 ? theme.fg("success", "✓") : theme.fg("error", "✗");
-						const displayItems = getDisplayItems(r.messages);
-						const finalOutput = getFinalOutput(r.messages);
 
 						container.addChild(new Spacer(1));
 						container.addChild(
@@ -881,27 +920,7 @@ export default function (pi: ExtensionAPI) {
 						);
 						container.addChild(new Text(theme.fg("muted", "Task: ") + theme.fg("dim", r.task), 0, 0));
 
-						// Show tool calls
-						for (const item of displayItems) {
-							if (item.type === "toolCall") {
-								container.addChild(
-									new Text(
-										theme.fg("muted", "→ ") + formatToolCall(item.name, item.args, theme.fg.bind(theme)),
-										0,
-										0,
-									),
-								);
-							}
-						}
-
-						// Show final output as markdown
-						if (finalOutput) {
-							container.addChild(new Spacer(1));
-							container.addChild(new Markdown(finalOutput.trim(), 0, 0, mdTheme));
-						}
-
-						const stepUsage = formatUsageStats(r.usage, r.model);
-						if (stepUsage) container.addChild(new Text(theme.fg("dim", stepUsage), 0, 0));
+						appendOutput(container, r);
 					}
 
 					const usageStr = formatUsageStats(aggregateUsage(details.results));
@@ -957,8 +976,6 @@ export default function (pi: ExtensionAPI) {
 
 					for (const r of details.results) {
 						const rIcon = isFailedResult(r) ? theme.fg("error", "✗") : theme.fg("success", "✓");
-						const displayItems = getDisplayItems(r.messages);
-						const finalOutput = getFinalOutput(r.messages);
 
 						container.addChild(new Spacer(1));
 						container.addChild(
@@ -966,27 +983,7 @@ export default function (pi: ExtensionAPI) {
 						);
 						container.addChild(new Text(theme.fg("muted", "Task: ") + theme.fg("dim", r.task), 0, 0));
 
-						// Show tool calls
-						for (const item of displayItems) {
-							if (item.type === "toolCall") {
-								container.addChild(
-									new Text(
-										theme.fg("muted", "→ ") + formatToolCall(item.name, item.args, theme.fg.bind(theme)),
-										0,
-										0,
-									),
-								);
-							}
-						}
-
-						// Show final output as markdown
-						if (finalOutput) {
-							container.addChild(new Spacer(1));
-							container.addChild(new Markdown(finalOutput.trim(), 0, 0, mdTheme));
-						}
-
-						const taskUsage = formatUsageStats(r.usage, r.model);
-						if (taskUsage) container.addChild(new Text(theme.fg("dim", taskUsage), 0, 0));
+						appendOutput(container, r);
 					}
 
 					const usageStr = formatUsageStats(aggregateUsage(details.results));
@@ -1025,33 +1022,5 @@ export default function (pi: ExtensionAPI) {
 		},
 	});
 
-	// Register subagent prompt injection
-	const SUBAGENT_PROMPT = `
-## Subagent Usage Rules
-
-You MUST use the subagent tool for:
-1. **Any research task** — Looking up docs, APIs, examples, or exploring unfamiliar code
-2. **Code review** — Reviewing your own changes or someone else's
-3. **Planning** — Before implementing multi-file changes
-4. **Parallel work** — Multiple independent investigations
-
-How to decide:
-- If the task involves reading 3+ files to understand something → use scout
-- If the task involves web search or external docs → use research
-- If the task involves reviewing code → use reviewer
-- If the task involves planning implementation → use planner
-- If the task involves executing a plan → use worker
-
-Example: User asks "add auth to this project"
-1. Use scout to understand the codebase structure
-2. Use research to look up auth best practices for this stack
-3. Use planner to create the implementation plan
-4. Use worker to execute the plan
-
-DO NOT do research yourself when a subagent exists for it.
-`.trim();
-
-	pi.on("before_agent_start", (event) => {
-		return { systemPrompt: event.systemPrompt + "\n" + SUBAGENT_PROMPT };
-	});
+	// Subagent usage rules are injected via AGENTS.md — no prompt injection here.
 }
