@@ -1,11 +1,11 @@
 {
   "collapseChangelog": true,
-  "defaultModel": "ox-alpha-free",
+  "defaultModel": "deepseek-v4-flash",
   "defaultProvider": "opencode-go",
   "defaultThinkingLevel": "high",
   "enableInstallTelemetry": false,
   "hideThinkingBlock": true,
-  "lastChangelogVersion": "0.84.3",
+  "lastChangelogVersion": "0.84.4",
   "terminal": {
     "showTerminalProgress": true
   },
