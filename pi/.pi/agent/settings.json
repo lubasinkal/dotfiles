@@ -1,6 +1,6 @@
 {
   "collapseChangelog": true,
-  "defaultModel": "deepseek-v4-flash",
+  "defaultModel": "muse-spark-1.2-contributor",
   "defaultProvider": "opencode-go",
   "defaultThinkingLevel": "high",
   "enableInstallTelemetry": false,
