@@ -34,3 +34,6 @@ if [[ -r "$HOME/.atuin/bin/env" ]]; then
   command -v atuin >/dev/null && eval "$(atuin init bash)"
 fi
 [[ -r "$HOME/.config/opencode/secrets.sh" ]] && source "$HOME/.config/opencode/secrets.sh"
+
+# mise
+eval "$(mise activate bash)"
