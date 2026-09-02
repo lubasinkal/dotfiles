@@ -6,6 +6,7 @@
  * Right: model (✻ thinking)
  */
 
+import os from "node:os";
 import type { AssistantMessage } from "@earendil-works/pi-ai";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
@@ -44,8 +45,15 @@ function branchTotals(branch: readonly unknown[]) {
 // ── Helpers ──────────────────────────────────────────────────────────────
 
 function shortenCwd(cwd: string): string {
-	const home = process.env.HOME ?? cwd;
-	return cwd === home || cwd.startsWith(home + "/") ? `~${cwd.slice(home.length)}` : cwd;
+	const home = os.homedir() || process.env.HOME || process.env.USERPROFILE || cwd;
+	// Normalize to forward slashes for cross-platform comparison (Windows uses \)
+	const normCwd = cwd.replace(/\\/g, "/").replace(/\/$/, "");
+	const normHome = home.replace(/\\/g, "/").replace(/\/$/, "");
+	if (normCwd.toLowerCase() === normHome.toLowerCase()) return "~";
+	if (normCwd.toLowerCase().startsWith(normHome.toLowerCase() + "/")) {
+		return `~${normCwd.slice(normHome.length)}`;
+	}
+	return cwd;
 }
 
 export default function (pi: ExtensionAPI) {
