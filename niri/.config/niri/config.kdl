@@ -61,7 +61,7 @@ layout {
 }
 
 spawn-at-startup "waybar"
-spawn-at-startup "qs" "-c" "noctalia-shell"
+spawn-at-startup "noctalia"
 
 hotkey-overlay {
 }
