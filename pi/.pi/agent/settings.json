@@ -5,10 +5,13 @@
   "defaultThinkingLevel": "high",
   "enableInstallTelemetry": false,
   "hideThinkingBlock": true,
-  "lastChangelogVersion": "0.84.4",
+  "lastChangelogVersion": "0.85.1",
   "terminal": {
     "showTerminalProgress": true
   },
   "theme": "dark",
-  "tuiMode": "regular"
+  "tuiMode": "regular",
+  "packages": [
+    "npm:@ollama/pi-web-search"
+  ]
 }
