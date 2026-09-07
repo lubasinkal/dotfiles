@@ -119,8 +119,8 @@ binds {
     XF86AudioPrev        allow-when-locked=true { spawn-sh "playerctl previous"; }
     XF86AudioNext        allow-when-locked=true { spawn-sh "playerctl next"; }
 
-    XF86MonBrightnessUp allow-when-locked=true { spawn "noctalia msg brightness-up eDP-1"; }
-    XF86MonBrightnessDown allow-when-locked=true { spawn "noctalia msg brightness-down eDP-1"; }
+    XF86MonBrightnessUp allow-when-locked=true { spawn "noctalia msg brightness-up current"; }
+    XF86MonBrightnessDown allow-when-locked=true { spawn "noctalia msg brightness-down current"; }
 
     Mod+O repeat=false { toggle-overview; }
     Mod+Q repeat=false { close-window; }
@@ -221,6 +221,7 @@ binds {
     Mod+Comma  { consume-window-into-column; }
     Mod+Period { expel-window-from-column; }
 
+    Mod+Shift+R hotkey-overlay-title="Reload Config" { spawn-sh "noctalia msg config-reload && niri msg action load-config-file"; }
     Mod+R { switch-preset-column-width; }
     Mod+Shift+R { switch-preset-column-width-back; }
     Mod+Ctrl+Shift+R { switch-preset-window-height; }
