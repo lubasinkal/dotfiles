@@ -119,8 +119,8 @@ binds {
     XF86AudioPrev        allow-when-locked=true { spawn-sh "playerctl previous"; }
     XF86AudioNext        allow-when-locked=true { spawn-sh "playerctl next"; }
 
-    XF86MonBrightnessUp allow-when-locked=true { spawn "noctalia msg brightness-up all"; }
-    XF86MonBrightnessDown allow-when-locked=true { spawn "noctalia msg brightness-down all"; }
+    XF86MonBrightnessUp allow-when-locked=true { spawn "noctalia msg brightness-up eDP-1"; }
+    XF86MonBrightnessDown allow-when-locked=true { spawn "noctalia msg brightness-down eDP-1"; }
 
     Mod+O repeat=false { toggle-overview; }
     Mod+Q repeat=false { close-window; }
