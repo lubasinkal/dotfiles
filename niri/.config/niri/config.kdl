@@ -105,7 +105,7 @@ binds {
 
     Mod+T hotkey-overlay-title="Open a Terminal: ghostty" { spawn "ghostty"; }
     Mod+Space hotkey-overlay-title="Toggle Vicinae Launcher" { spawn-sh "vicinae toggle"; }
-    Alt+Space hotkey-overlay-title="Toggle Noctalia Launcher" { spawn "noctalia msg panel-toggle launcher"; }
+    Alt+Space hotkey-overlay-title="Toggle Noctalia Launcher" { spawn-sh "noctalia msg panel-toggle launcher"; }
     Super+Alt+L hotkey-overlay-title="Lock the Screen: swaylock" { spawn "swaylock"; }
     Super+Alt+S allow-when-locked=true hotkey-overlay-title=null { spawn-sh "pkill orca || exec orca"; }
 
