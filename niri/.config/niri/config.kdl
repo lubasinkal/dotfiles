@@ -223,7 +223,6 @@ binds {
 
     Mod+Shift+R hotkey-overlay-title="Reload Config" { spawn-sh "noctalia msg config-reload && niri msg action load-config-file"; }
     Mod+R { switch-preset-column-width; }
-    Mod+Shift+R { switch-preset-column-width-back; }
     Mod+Ctrl+Shift+R { switch-preset-window-height; }
     Mod+Ctrl+R { reset-window-height; }
 
