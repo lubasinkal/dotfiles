@@ -14,7 +14,8 @@
    "escape_key_behavior": "close_window",
    "font": {
       "normal": {
-         "family": "SpaceMono Nerd Font [NONE]"
+         "family": "SpaceMono Nerd Font [NONE]",
+         "size": 11
       }
    },
    "theme": {
@@ -25,7 +26,7 @@
    },
    "launcher_window": {
       "rounding": 10,
-      "opacity": 0.4,
+      "opacity": 0.6,
       "blur": {
          "enabled": true
       },

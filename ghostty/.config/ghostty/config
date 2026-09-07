@@ -1,6 +1,6 @@
 # cyberdream — matches tmux status (#16181a bg) and nvim cyberdream palette
 # Theme file: themes/cyberdream (overrides any bundled theme)
-theme = cyberdream
+theme = moonfly-default
 font-family = "SpaceMono Nerd Font Mono"
 font-size = 14
 background-opacity = 0.9
