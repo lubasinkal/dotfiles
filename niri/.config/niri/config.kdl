@@ -19,7 +19,7 @@ input {
 layout {
     gaps 1
     // Transparent background for noctalia-shell wallpaper
-    background-color "transparent"
+    // background-color "transparent"
     center-focused-column "never"
 }
 
@@ -32,18 +32,6 @@ layer-rule {
     match namespace="^noctalia-wallpaper"
 }
 
-// Firefox picture-in-picture floats (matches native + Flatpak app-ids).
-window-rule {
-    match app-id=r#"firefox$"# title="^Picture-in-Picture$"
-    open-floating true
-}
-
-// Rounded corners for all windows.
-window-rule {
-    geometry-corner-radius 12
-    clip-to-geometry true
-}
-
 binds {
     // "Mod" is Super on a TTY, Alt in a winit window.
     Mod+Shift+Slash { show-hotkey-overlay; }
@@ -52,7 +40,6 @@ binds {
     Mod+Space hotkey-overlay-title="Toggle Vicinae Launcher" { spawn-sh "vicinae toggle"; }
     Alt+Space hotkey-overlay-title="Toggle Noctalia Launcher" { spawn-sh "noctalia msg panel-toggle launcher"; }
     Super+Alt+L hotkey-overlay-title="Lock the Screen: swaylock" { spawn "swaylock"; }
-    Super+Alt+S allow-when-locked=true hotkey-overlay-title=null { spawn-sh "pkill orca || exec orca"; }
 
     XF86AudioRaiseVolume allow-when-locked=true { spawn-sh "noctalia msg volume-up"; }
     XF86AudioLowerVolume allow-when-locked=true { spawn-sh "noctalia msg volume-down"; }
@@ -185,7 +172,6 @@ binds {
 
     Mod+V       { toggle-window-floating; }
     Mod+Shift+V { switch-focus-between-floating-and-tiling; }
-    Mod+W { toggle-column-tabbed-display; }
 
     Print { screenshot; }
     Ctrl+Print { screenshot-screen; }
