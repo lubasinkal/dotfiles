@@ -3,7 +3,7 @@
 input {
     keyboard {
         xkb {
-            // Empty = fetch from locale1 (localectl set-x11-keymap)
+            options "ctrl:nocaps"
         }
         numlock
     }
