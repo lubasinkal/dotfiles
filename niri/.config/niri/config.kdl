@@ -21,60 +21,15 @@ layout {
     // Transparent background for noctalia-shell wallpaper
     background-color "transparent"
     center-focused-column "never"
-
-    preset-column-widths {
-        proportion 0.33333
-        proportion 0.5
-        proportion 0.66667
-    }
-    default-column-width { proportion 0.5; }
-
-    focus-ring {
-        off
-        active-color "#7fc8ff"
-        inactive-color "#505050"
-    }
-    border {
-        off
-        width 4
-        active-color "#ffc87f"
-        inactive-color "#505050"
-        urgent-color "#9b0000"
-    }
-    shadow {
-        on
-        softness 20
-        spread 3
-        offset x=0 y=3
-        color "#0005"
-    }
-    struts {
-    }
 }
 
 spawn-at-startup "waybar"
 spawn-at-startup "noctalia"
 
-hotkey-overlay {
-}
-prefer-no-csd
-
-blur {
-    passes 2
-    offset 3.0
-    noise 0.03
-    saturation 1.0
-}
-
 screenshot-path "~/Pictures/Screenshots/Screenshot from %Y-%m-%d %H-%M-%S.png"
-
-animations {
-    slowdown 0.5
-}
 
 layer-rule {
     match namespace="^noctalia-wallpaper"
-    place-within-backdrop true
 }
 
 // Firefox picture-in-picture floats (matches native + Flatpak app-ids).
@@ -87,16 +42,6 @@ window-rule {
 window-rule {
     geometry-corner-radius 12
     clip-to-geometry true
-}
-
-// Per-app opacity overrides.
-window-rule {
-    match app-id=r#"^com\.mitchellh\.ghostty$"#
-    opacity 0.75
-}
-window-rule {
-    match app-id="^firefox$"
-    opacity 0.9
 }
 
 binds {
