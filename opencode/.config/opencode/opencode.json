@@ -18,6 +18,11 @@
         "Authorization": "Bearer {env:N8N_MCP_TOKEN}"
       }
     },
+    "Astro docs": {
+      "type": "remote",
+      "url": "https://mcp.docs.astro.build/mcp",
+      "enabled": true
+    },
     "resend": {
       "type": "remote",
       "url": "https://mcp.resend.com/mcp",
