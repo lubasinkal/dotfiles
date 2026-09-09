@@ -73,7 +73,9 @@ export default function (pi: ExtensionAPI) {
 						n < 1000 ? `${n}` : n < 1_000_000 ? `${(n / 1000).toFixed(1)}k` : `${(n / 1_000_000).toFixed(1)}M`;
 					const fmtCost = (n: number) => (n >= 100 ? `$${(n / 1000).toFixed(2)}k` : `$${n.toFixed(2)}`);
 
-					const statuses = footerData.getExtensionStatuses().filter(Boolean);
+					const raw = footerData.getExtensionStatuses() as unknown;
+					const statuses: string[] = (raw instanceof Map ? [...(raw as Map<string,string>).values()] : Array.isArray(raw) ? raw : raw && typeof raw === "object" ? Object.values(raw as Record<string,string>) : []) as string[];
+					const filtered = statuses.filter(Boolean) as string[];
 					const ctxUsage = ctx.getContextUsage?.();
 
 					// Left: directory (branch) · ↑in ↓out [ctx%] · $cost
@@ -103,7 +105,7 @@ export default function (pi: ExtensionAPI) {
 
 					// Right: [statuses ·] model · ✻ thinking
 					const rightParts: string[] = [];
-					if (statuses.length) rightParts.push(...statuses);
+					if (filtered.length) rightParts.push(...filtered);
 					const model = ctx.model?.id || "—";
 					const provider = ctx.model?.provider || "";
 					// Narrow: hide provider prefix
