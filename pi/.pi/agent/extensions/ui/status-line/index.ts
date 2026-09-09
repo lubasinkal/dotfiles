@@ -73,6 +73,8 @@ export default function (pi: ExtensionAPI) {
 						n < 1000 ? `${n}` : n < 1_000_000 ? `${(n / 1000).toFixed(1)}k` : `${(n / 1_000_000).toFixed(1)}M`;
 					const fmtCost = (n: number) => (n >= 100 ? `$${(n / 1000).toFixed(2)}k` : `$${n.toFixed(2)}`);
 
+					const statuses = [...footerData.getExtensionStatuses().values()].filter(Boolean) as string[];
+
 					// Left: directory (branch) · ↑in ↓out · $cost
 					const leftParts: string[] = [];
 
@@ -83,22 +85,39 @@ export default function (pi: ExtensionAPI) {
 					leftParts.push(theme.fg("dim", `↑`) + theme.fg("accent", fmt(input)) + theme.fg("dim", " ↓") + theme.fg("accent", fmt(output)));
 					if (cost > 0) leftParts.push(theme.fg("success", fmtCost(cost)));
 
-					const left = leftParts.join(theme.fg("border", " · "));
+					// Narrow: drop cost first
+					let left = leftParts.join(theme.fg("border", " · "));
+					if (width < 60 && cost > 0) {
+						left = leftParts.slice(0, -1).join(theme.fg("border", " · "));
+					}
 
-					// Right: model · ✻ thinking — each part themed individually
+					// Right: [statuses ·] model · ✻ thinking
 					const rightParts: string[] = [];
+					if (statuses.length) rightParts.push(...statuses);
 					const model = ctx.model?.id || "—";
 					const provider = ctx.model?.provider || "";
-					rightParts.push(theme.fg("dim", provider ? `${provider}/${model}` : model));
+					// Narrow: hide provider prefix
+					const modelStr = width < 80 && provider ? model : provider ? `${provider}/${model}` : model;
+					rightParts.push(theme.fg("dim", modelStr));
 					const thinking = ctx.thinkingLevel;
 					if (thinking && thinking !== "off") rightParts.push(theme.fg("warning", `✻ ${thinking}`));
 
-					const right = rightParts.join(theme.fg("border", " · "));
+					let right = rightParts.join(theme.fg("border", " · "));
+					// Very narrow: drop thinking
+					if (width < 50 && thinking && thinking !== "off") {
+						right = rightParts.slice(0, -1).join(theme.fg("border", " · "));
+					}
 
-					// Layout: left [gap] right
+					// Layout: left [gap] right, or stacked on very narrow / with statuses
+					if (width < 45) {
+						return [truncateToWidth(left, width), truncateToWidth(right, width)];
+					}
 					const leftWidth = visibleWidth(left);
 					const rightWidth = visibleWidth(right);
 					const gap = Math.max(1, width - leftWidth - rightWidth);
+					if (gap === 1 && leftWidth + rightWidth + 1 > width) {
+						return [truncateToWidth(left, width), truncateToWidth(right, width)];
+					}
 					return [truncateToWidth(left + " ".repeat(gap) + right, width)];
 				},
 			};
