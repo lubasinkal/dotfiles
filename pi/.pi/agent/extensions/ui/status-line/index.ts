@@ -73,16 +73,26 @@ export default function (pi: ExtensionAPI) {
 						n < 1000 ? `${n}` : n < 1_000_000 ? `${(n / 1000).toFixed(1)}k` : `${(n / 1_000_000).toFixed(1)}M`;
 					const fmtCost = (n: number) => (n >= 100 ? `$${(n / 1000).toFixed(2)}k` : `$${n.toFixed(2)}`);
 
-					const statuses = [...footerData.getExtensionStatuses().values()].filter(Boolean) as string[];
+					const statuses = footerData.getExtensionStatuses().filter(Boolean);
+					const ctxUsage = ctx.getContextUsage?.();
 
-					// Left: directory (branch) · ↑in ↓out · $cost
+					// Left: directory (branch) · ↑in ↓out [ctx%] · $cost
 					const leftParts: string[] = [];
 
 					leftParts.push(theme.fg("accent", shortenCwd(ctx.cwd)));
 					const branch = footerData.getGitBranch();
 					if (branch) leftParts.push(theme.fg("dim", `(${branch})`));
 
-					leftParts.push(theme.fg("dim", `↑`) + theme.fg("accent", fmt(input)) + theme.fg("dim", " ↓") + theme.fg("accent", fmt(output)));
+					let tokenStr =
+						theme.fg("dim", `↑`) + theme.fg("accent", fmt(input)) + theme.fg("dim", " ↓") + theme.fg("accent", fmt(output));
+					if (ctxUsage?.tokens != null && ctxUsage?.percent != null && width >= 70) {
+						const pct = Math.round(ctxUsage.percent);
+						if (Number.isFinite(pct)) {
+							const color = pct >= 80 ? "error" : pct >= 60 ? "warning" : "dim";
+							tokenStr += theme.fg("dim", " ") + theme.fg(color, `${pct}%`);
+						}
+					}
+					leftParts.push(tokenStr);
 					if (cost > 0) leftParts.push(theme.fg("success", fmtCost(cost)));
 
 					// Narrow: drop cost first
@@ -101,7 +111,6 @@ export default function (pi: ExtensionAPI) {
 					rightParts.push(theme.fg("dim", modelStr));
 					const thinking = ctx.thinkingLevel;
 					if (thinking && thinking !== "off") rightParts.push(theme.fg("warning", `✻ ${thinking}`));
-
 					let right = rightParts.join(theme.fg("border", " · "));
 					// Very narrow: drop thinking
 					if (width < 50 && thinking && thinking !== "off") {
