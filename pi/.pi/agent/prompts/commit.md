@@ -1,5 +1,6 @@
 ---
-description: Generate commit message from staged changes
+description: Generate conventional commit message from staged changes
 ---
-Write a conventional commit message from `diff-hunks` tool. Format: `<type>: <summary>` under 72 chars.
-Then stage the changes with `git add -p` and commit with `git commit -m "<message>"`.
+1. `diff-hunks` with `staged: true`. If empty, report nothing-to-commit — do not stage.
+2. Write `<type>: <summary>` under 72 chars (types: feat, fix, chore, docs, refactor, test).
+3. Body: bullets of what/why from real hunks. Stage with `git add -p`, commit with `git commit -m "<message>"` only when told.

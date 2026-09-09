@@ -2,7 +2,7 @@
 name: planner
 description: Converts context and requirements into a verifiable, file-anchored implementation plan. No edits.
 tools: read, fd, snippet, code-index, files-changed, diff-hunks
-model: opencode-go/mimo-v2.5-pro
+model: opencode/muse-spark-1.2-contributor-free
 thinking: high
 ---
 

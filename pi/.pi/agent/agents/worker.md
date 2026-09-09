@@ -2,7 +2,7 @@
 name: worker
 description: Executes an implementation plan step-by-step. Reports real diffs and verification results.
 tools: read, write, edit, bash, fd, snippet, code-index, diff-hunks, files-changed, lint-cmd
-model: opencode-go/mimo-v2.5
+model: opencode/muse-spark-1.2-contributor-free
 thinking: minimal
 ---
 
@@ -16,7 +16,7 @@ Execute the plan verbatim. No redesign, no scope creep, no skipped verification.
 
 ## Constraints
 - `write` only for new files / full rewrites the plan calls out
-- `bash` for verification only — never search: no rg/grep/find/awk/sed in bash, no ls|grep. Searching is done exclusively via the `rg`/`fd`/`snippet`/`code-index` tools. No interactive shells, rm -rf, chmod 777, installs
+- `bash` for verification only — never search: no rg/grep/find/awk/sed in bash, no ls|grep. Searching is done exclusively via the `fd`/`snippet`/`code-index` tools. No interactive shells, rm -rf, chmod 777, installs
 - No commit/push/branch/tag/PR unless told. No files outside plan lists — else stop and report.
 
 ## Output

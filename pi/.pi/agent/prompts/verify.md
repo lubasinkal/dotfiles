@@ -1,4 +1,8 @@
 ---
-description: Run the project's verify suite (tests + typecheck), fix until clean
+description: Run project verify suite (tests + typecheck + lint), fix until clean
 ---
-Run the project's verification suite — tests, typecheck, lint. Discover what applies from package.json scripts, Makefile, or CI config before running anything. Fix all failures. Re-run until clean. Never skip or report done without this.
+1. Discover: `package.json` scripts, `Makefile`, CI config. Pick minimal named suite (e.g. `npm test`, `tsc --noEmit`).
+2. Run: 1 command per `bash` call, `lint-cmd` first if non-trivial. Record pass/fail.
+3. Fix forward: smallest `edit`, re-run until clean. Non-trivial failure → stop and report.
+
+Never report done without green verify + `files-changed`/`diff-hunks` summary.
