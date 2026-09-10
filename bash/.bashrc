@@ -12,8 +12,8 @@ shopt -s histappend checkwinsize cmdhist
 [[ -r /usr/share/doc/pkgfile/command-not-found.bash ]] && \
   source /usr/share/doc/pkgfile/command-not-found.bash
 
-# fzf key bindings + completion.
-command -v fzf >/dev/null && eval "$(fzf --bash)" 2>/dev/null
+# fzf key bindings + completion — loaded after atuin so Ctrl-R stays on fzf.
+# (atuin is started with --disable-ctrl-r below)
 
 # Prompt.
 command -v starship >/dev/null && eval "$(starship init bash)"
@@ -31,8 +31,9 @@ command -v bun >/dev/null && alias bunupdate='(cd ~/.bun/install/global && bun u
 command -v zoxide >/dev/null && eval "$(zoxide init bash)"
 if [[ -r "$HOME/.atuin/bin/env" ]]; then
   . "$HOME/.atuin/bin/env"
-  command -v atuin >/dev/null && eval "$(atuin init bash)"
+  command -v atuin >/dev/null && eval "$(atuin init bash --disable-ctrl-r)"
 fi
+command -v fzf >/dev/null && eval "$(fzf --bash)" 2>/dev/null
 [[ -r "$HOME/.config/opencode/secrets.sh" ]] && source "$HOME/.config/opencode/secrets.sh"
 
 # mise

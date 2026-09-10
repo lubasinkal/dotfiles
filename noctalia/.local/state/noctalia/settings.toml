@@ -162,13 +162,13 @@ transition_on_startup = true
     recursive = false
 
     [wallpaper.default]
-    path = "/home/lubasi/Pictures/pexels-adrien-olichon-1257089-2387819.jpg"
+    path = "/home/lubasi/Pictures/wp8308010-adventure-time-aesthetic-wallpapers.jpg"
 
     [wallpaper.last]
-    path = "/home/lubasi/Pictures/pexels-adrien-olichon-1257089-2387819.jpg"
+    path = "/home/lubasi/Pictures/wp8308010-adventure-time-aesthetic-wallpapers.jpg"
 
     [wallpaper.monitors.eDP-1]
-    path = "/home/lubasi/Pictures/pexels-adrien-olichon-1257089-2387819.jpg"
+    path = "/home/lubasi/Pictures/wp8308010-adventure-time-aesthetic-wallpapers.jpg"
 
 [widget.bar]
 type = "noctalia/timer:bar"

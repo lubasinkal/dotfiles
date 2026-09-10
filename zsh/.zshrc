@@ -17,8 +17,8 @@ export HISTORY_IGNORE="(&|[bf]g|c|clear|history|exit|q|pwd|* --help)"
 [[ -r /usr/share/doc/pkgfile/command-not-found.zsh ]] && \
   source /usr/share/doc/pkgfile/command-not-found.zsh
 
-# fzf key bindings + completion.
-(( $+commands[fzf] )) && eval "$(fzf --zsh)" 2>/dev/null
+# fzf key bindings + completion — loaded after atuin so Ctrl-R stays on fzf.
+# (atuin is started with --disable-ctrl-r below)
 
 # Prompt.
 (( $+commands[starship] )) && eval "$(starship init zsh)"
@@ -37,6 +37,11 @@ alias n='ninja'
 (( $+commands[zoxide] )) && eval "$(zoxide init zsh)"
 if [[ -r "$HOME/.atuin/bin/env" ]]; then
   . "$HOME/.atuin/bin/env"
-  (( $+commands[atuin] )) && eval "$(atuin init zsh)"
+  (( $+commands[atuin] )) && eval "$(atuin init zsh --disable-ctrl-r)"
 fi
+(( $+commands[fzf] )) && eval "$(fzf --zsh)" 2>/dev/null
 [[ -r "$HOME/.config/opencode/secrets.sh" ]] && source "$HOME/.config/opencode/secrets.sh"
+
+# Pi
+export PATH="/home/lubasi/.local/share/pi-node/node-v22.23.2-linux-x64/bin:$PATH"
+export QT_QPA_PLATFORMTHEME=kvantum
