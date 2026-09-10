@@ -1,6 +1,6 @@
 {
   "collapseChangelog": true,
-  "defaultModel": "muse-spark-1.3-contributor-free",
+  "defaultModel": "muse-spark-1.2-contributor-free",
   "defaultProvider": "opencode",
   "defaultThinkingLevel": "high",
   "enableInstallTelemetry": false,
