@@ -1,36 +1,45 @@
-# Portable + fast: every dep guarded.
+# Oh My Zsh — https://ohmyz.sh
 
-# History.
+export ZSH="$HOME/.oh-my-zsh"
+ZSH_THEME=""  # starship handles prompt
+
+# OMZ behavior
+DISABLE_AUTO_UPDATE="false"
+DISABLE_UPDATE_PROMPT="true"
+COMPLETION_WAITING_DOTS="true"
+HIST_STAMPS="yyyy-mm-dd"
+
+# Plugins — keep lean, starship/zoxide/atuin/fzf handle the rest outside OMZ
+plugins=(
+  git
+  archlinux
+  command-not-found
+  zsh-autosuggestions
+  zsh-history-substring-search
+  zsh-syntax-highlighting
+  fzf-tab
+)
+
+# fzf-tab must be after syntax-highlighting if cloned as OMZ custom plugin
+# Ensure custom plugins exist (clone on first run)
+[[ ! -d "$ZSH/custom/plugins/fzf-tab" ]] && git clone --depth 1 https://github.com/Aloxaf/fzf-tab "$ZSH/custom/plugins/fzf-tab" 2>/dev/null
+
+source "$ZSH/oh-my-zsh.sh"
+
+# --- Completion cache (OMZ already called compinit; ensure cached dump) ---
+# OMZ's compinit is fine; no duplicate call needed.
+
+# --- History (OMZ sets some, we enforce) ---
 HISTSIZE=50000
 SAVEHIST=50000
 HISTFILE="$HOME/.zsh_history"
-setopt share_history hist_ignore_all_dups hist_ignore_space hist_reduce_blanks hist_verify
+setopt share_history hist_ignore_all_dups hist_ignore_space hist_reduce_blanks hist_verify hist_expire_dups_first
 export HISTORY_IGNORE="(&|[bf]g|c|clear|history|exit|q|pwd|* --help)"
 
-# System plugins (Arch path).
-[[ -r /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh ]] && \
-  source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
-[[ -r /usr/share/zsh/plugins/zsh-history-substring-search/zsh-history-substring-search.zsh ]] && \
-  source /usr/share/zsh/plugins/zsh-history-substring-search/zsh-history-substring-search.zsh
-[[ -r /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]] && \
-  source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
-[[ -r /usr/share/doc/pkgfile/command-not-found.zsh ]] && \
-  source /usr/share/doc/pkgfile/command-not-found.zsh
-
-# fzf key bindings + completion — loaded after atuin so Ctrl-R stays on fzf.
-# (atuin is started with --disable-ctrl-r below)
-
-# Prompt.
+# --- Prompt & tools ---
 (( $+commands[starship] )) && eval "$(starship init zsh)"
 
-_zsh_path_prepend() { case ":$PATH:" in *":$1:"*) ;; *) export PATH="$1:$PATH" ;; esac; }
-_zsh_path_prepend "$HOME/.local/bin"
-_zsh_path_prepend "$HOME/.bun/bin"
-
 alias c='clear'
-alias make='make -j$(nproc)'
-alias ninja='ninja -j$(nproc)'
-alias n='ninja'
 (( $+commands[bun] )) && alias bunupdate='(cd ~/.bun/install/global && bun update --latest)'
 
 [[ -s "$HOME/.bun/_bun" ]] && source "$HOME/.bun/_bun"
@@ -42,6 +51,6 @@ fi
 (( $+commands[fzf] )) && eval "$(fzf --zsh)" 2>/dev/null
 [[ -r "$HOME/.config/opencode/secrets.sh" ]] && source "$HOME/.config/opencode/secrets.sh"
 
-# Pi
-export PATH="/home/lubasi/.local/share/pi-node/node-v22.23.2-linux-x64/bin:$PATH"
-export QT_QPA_PLATFORMTHEME=kvantum
+# Env (PATH, QT_QPA_PLATFORMTHEME) lives in .zshenv.
+# pkgfile command-not-found handled by OMZ plugin + fallback
+[[ -r /usr/share/doc/pkgfile/command-not-found.zsh ]] && source /usr/share/doc/pkgfile/command-not-found.zsh 2>/dev/null || true
