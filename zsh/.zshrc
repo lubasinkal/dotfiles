@@ -35,8 +35,22 @@ source "$ZSH/oh-my-zsh.sh"
 HISTSIZE=50000
 SAVEHIST=50000
 HISTFILE="$HOME/.zsh_history"
-setopt share_history hist_ignore_all_dups hist_ignore_space hist_reduce_blanks hist_verify hist_expire_dups_first
+setopt share_history inc_append_history hist_ignore_all_dups hist_ignore_space hist_reduce_blanks hist_verify hist_expire_dups_first
+# Don't persist failed commands (non-zero exit) — handled via precmd hook below
 export HISTORY_IGNORE="(&|[bf]g|c|clear|history|exit|q|pwd|* --help)"
+
+# Remove failed commands (exit != 0) from history — zshaddhistory can't see exit code, so use precmd
+autoload -Uz add-zsh-hook
+_zsh_hist_remove_failed() {
+  local ret=$?
+  (( ret == 0 )) && return
+  local histfile="${HISTFILE:-$HOME/.zsh_history}"
+  [[ -f "$histfile" ]] || return
+  # Drop last line from HISTFILE (just-executed failed command) and reload
+  local tmp=$(mktemp)
+  head -n -1 "$histfile" > "$tmp" 2>/dev/null && mv "$tmp" "$histfile" && fc -R "$histfile" 2>/dev/null || rm -f "$tmp"
+}
+add-zsh-hook precmd _zsh_hist_remove_failed
 
 # --- Prompt & tools ---
 (( $+commands[starship] )) && eval "$(starship init zsh)"
