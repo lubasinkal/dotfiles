@@ -38,6 +38,7 @@ binds {
     Mod+T hotkey-overlay-title="Open a Terminal: ghostty" { spawn "ghostty"; }
     Mod+Space hotkey-overlay-title="Toggle Vicinae Launcher" { spawn-sh "vicinae toggle"; }
     Alt+Space hotkey-overlay-title="Toggle Noctalia Launcher" { spawn-sh "noctalia msg panel-toggle launcher"; }
+    Mod+W hotkey-overlay-title="Wallpaper Carousel" { spawn-sh "noctalia msg plugin yngwe/wallpaperCarousel:service all toggle"; }
     Super+Alt+L hotkey-overlay-title="Lock the Screen: swaylock" { spawn "swaylock"; }
 
     XF86AudioRaiseVolume allow-when-locked=true { spawn-sh "noctalia msg volume-up"; }

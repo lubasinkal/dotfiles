@@ -12,12 +12,14 @@ HIST_STAMPS="yyyy-mm-dd"
 # Plugins — keep lean, starship/zoxide/atuin/fzf handle the rest outside OMZ
 plugins=(
   git
-  archlinux
-  command-not-found
+  gh
+  eza
+  mise
+  docker
+  bun
   zsh-autosuggestions
-  zsh-history-substring-search
   zsh-syntax-highlighting
-  fzf-tab
+  fzf
 )
 
 # fzf-tab must be after syntax-highlighting if cloned as OMZ custom plugin
