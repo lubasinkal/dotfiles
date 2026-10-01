@@ -9,7 +9,7 @@ for p in zsh-autosuggestions zsh-syntax-highlighting; do
 done
 unset p
 
-ZSH_THEME=""
+ZSH_THEME="refined"
 DISABLE_AUTO_UPDATE="false"
 DISABLE_UPDATE_PROMPT="true"
 COMPLETION_WAITING_DOTS="true"
@@ -35,3 +35,6 @@ alias c='clear'
 (( $+commands[fzf] )) && eval "$(fzf --zsh)" 2>/dev/null
 [[ -r "$HOME/.config/opencode/secrets.sh" ]] && source "$HOME/.config/opencode/secrets.sh"
 [[ -r /usr/share/doc/pkgfile/command-not-found.zsh ]] && source /usr/share/doc/pkgfile/command-not-found.zsh 2>/dev/null || true
+
+# bun completions
+[ -s "/home/lubasi/.bun/_bun" ] && source "/home/lubasi/.bun/_bun"

@@ -5,3 +5,5 @@
 /tmux/.config/tmux/plugins/
 /tmux/.config/tmux/history
 /ghostty/.config/ghostty/themes/noctalia
+/pi/.pi/agent/install
+/pi/.pi/agent/bin
