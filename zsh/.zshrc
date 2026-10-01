@@ -58,8 +58,8 @@ bindkey '^[w' kill-region
 autoload -Uz add-zsh-hook
 
 _zsh_no_failed() {
-  local status=$?
-  (( status == 0 )) && return
+  local exit_code=$?
+  (( exit_code == 0 )) && return
 
   local history_file="${HISTFILE:-$HOME/.zsh_history}"
   local temp_file
@@ -92,7 +92,7 @@ if [[ -s "$HOME/.bun/_bun" ]]; then
 fi
 
 if (( $+commands[zoxide] )); then
-  eval "$(zoxide init --cmd cd zsh)"
+  eval "$(zoxide init zsh)"
 fi
 
 if [[ -r "$HOME/.atuin/bin/env" ]]; then
