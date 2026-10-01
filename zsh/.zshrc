@@ -1,40 +1,125 @@
-# Bootstrap OMZ on fresh devices
+# Bootstrap Oh My Zsh on fresh devices
 export ZSH="${ZSH:-$HOME/.oh-my-zsh}"
+
 if [[ ! -f "$ZSH/oh-my-zsh.sh" ]]; then
   git clone --depth 1 https://github.com/ohmyzsh/ohmyzsh.git "$ZSH" 2>/dev/null
 fi
+
 # Bootstrap custom plugins if missing
-for p in zsh-autosuggestions zsh-syntax-highlighting; do
-  [[ -d "$ZSH/custom/plugins/$p" ]] || git clone --depth 1 "https://github.com/zsh-users/$p" "$ZSH/custom/plugins/$p" 2>/dev/null
+for plugin in zsh-autosuggestions zsh-syntax-highlighting; do
+  if [[ ! -d "$ZSH/custom/plugins/$plugin" ]]; then
+    git clone --depth 1 "https://github.com/zsh-users/$plugin" "$ZSH/custom/plugins/$plugin" 2>/dev/null
+  fi
 done
-unset p
 
 ZSH_THEME="refined"
 DISABLE_AUTO_UPDATE="false"
 DISABLE_UPDATE_PROMPT="true"
 COMPLETION_WAITING_DOTS="true"
 
-plugins=(git gh eza mise docker bun fzf zsh-autosuggestions zsh-syntax-highlighting)
+plugins=(
+  git
+  gh
+  eza
+  mise
+  docker
+  bun
+  fzf
+  zsh-autosuggestions
+  zsh-syntax-highlighting
+)
+
 source "$ZSH/oh-my-zsh.sh"
 
-# History — drop failed commands (exit != 0)
-HISTSIZE=50000; SAVEHIST=50000; HISTFILE="$HOME/.zsh_history"
-setopt share_history inc_append_history hist_ignore_all_dups hist_ignore_space hist_reduce_blanks hist_verify hist_expire_dups_first
+# History
+HISTSIZE=50000
+SAVEHIST=50000
+HISTFILE="$HOME/.zsh_history"
+
+setopt share_history
+setopt inc_append_history
+setopt hist_ignore_all_dups
+setopt hist_ignore_space
+setopt hist_reduce_blanks
+setopt hist_verify
+setopt hist_expire_dups_first
+setopt hist_save_no_dups
+setopt hist_find_no_dups
+
 export HISTORY_IGNORE="(&|[bf]g|c|clear|history|exit|q|pwd|* --help)"
+
+# Key bindings
+bindkey -e
+bindkey '^p' history-search-backward
+bindkey '^n' history-search-forward
+bindkey '^[w' kill-region
+
+# Remove failed commands from history
 autoload -Uz add-zsh-hook
-_zsh_no_failed() { local r=$?; ((r==0)) && return; local f="${HISTFILE:-$HOME/.zsh_history}" t; t=$(mktemp); head -n -1 "$f" >"$t" 2>/dev/null && mv "$t" "$f" && fc -R "$f" 2>/dev/null || rm -f "$t"; }
+
+_zsh_no_failed() {
+  local status=$?
+  (( status == 0 )) && return
+
+  local history_file="${HISTFILE:-$HOME/.zsh_history}"
+  local temp_file
+  temp_file=$(mktemp)
+
+  if head -n -1 "$history_file" >"$temp_file" 2>/dev/null; then
+    mv "$temp_file" "$history_file"
+    fc -R "$history_file" 2>/dev/null
+  else
+    rm -f "$temp_file"
+  fi
+}
+
 add-zsh-hook precmd _zsh_no_failed
 
-# Prompt & tools — all guarded
-(( $+commands[starship] )) && eval "$(starship init zsh)"
+# Prompt and tools
+if (( $+commands[starship] )); then
+  eval "$(starship init zsh)"
+fi
+
 alias c='clear'
-(( $+commands[bun] )) && alias bunupdate='(cd ~/.bun/install/global && bun update --latest)'
-[[ -s "$HOME/.bun/_bun" ]] && source "$HOME/.bun/_bun"
-(( $+commands[zoxide] )) && eval "$(zoxide init zsh)"
-[[ -r "$HOME/.atuin/bin/env" ]] && { source "$HOME/.atuin/bin/env"; (( $+commands[atuin] )) && eval "$(atuin init zsh --disable-ctrl-r)"; }
-(( $+commands[fzf] )) && eval "$(fzf --zsh)" 2>/dev/null
-[[ -r "$HOME/.config/opencode/secrets.sh" ]] && source "$HOME/.config/opencode/secrets.sh"
-[[ -r /usr/share/doc/pkgfile/command-not-found.zsh ]] && source /usr/share/doc/pkgfile/command-not-found.zsh 2>/dev/null || true
+alias reload='source ~/.zshrc'
+
+if (( $+commands[bun] )); then
+  alias bunupdate='(cd ~/.bun/install/global && bun update --latest)'
+fi
+
+if [[ -s "$HOME/.bun/_bun" ]]; then
+  source "$HOME/.bun/_bun"
+fi
+
+if (( $+commands[zoxide] )); then
+  eval "$(zoxide init --cmd cd zsh)"
+fi
+
+if [[ -r "$HOME/.atuin/bin/env" ]]; then
+  source "$HOME/.atuin/bin/env"
+  if (( $+commands[atuin] )); then
+    eval "$(atuin init zsh --disable-ctrl-r)"
+  fi
+fi
+
+if (( $+commands[fzf] )); then
+  eval "$(fzf --zsh)" 2>/dev/null
+fi
+
+# Completion styling
+zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
+zstyle ':completion:*' menu no
+
+# Optional integrations
+if [[ -r "$HOME/.config/opencode/secrets.sh" ]]; then
+  source "$HOME/.config/opencode/secrets.sh"
+fi
+
+if [[ -r /usr/share/doc/pkgfile/command-not-found.zsh ]]; then
+  source /usr/share/doc/pkgfile/command-not-found.zsh 2>/dev/null
+fi
 
 # bun completions
-[ -s "/home/lubasi/.bun/_bun" ] && source "/home/lubasi/.bun/_bun"
+if [[ -s "$HOME/.bun/_bun" ]]; then
+  source "$HOME/.bun/_bun"
+fi
