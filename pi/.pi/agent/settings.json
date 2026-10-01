@@ -1,8 +1,8 @@
 {
   "collapseChangelog": true,
-  "defaultModel": "muse-spark-1.2-contributor-free",
-  "defaultProvider": "opencode",
-  "defaultThinkingLevel": "high",
+  "defaultModel": "gpt-6-luna",
+  "defaultProvider": "openai-codex",
+  "defaultThinkingLevel": "minimal",
   "enableInstallTelemetry": false,
   "hideThinkingBlock": true,
   "lastChangelogVersion": "0.99.2",

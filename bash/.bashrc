@@ -37,4 +37,4 @@ command -v fzf >/dev/null && eval "$(fzf --bash)" 2>/dev/null
 [[ -r "$HOME/.config/opencode/secrets.sh" ]] && source "$HOME/.config/opencode/secrets.sh"
 
 # mise
-eval "$(mise activate bash)"
+# eval "$(mise activate bash)"
