@@ -13,7 +13,7 @@ for plugin in zsh-autosuggestions zsh-syntax-highlighting; do
 done
 
 ZSH_THEME="refined"
-DISABLE_AUTO_UPDATE="false"
+DISABLE_AUTO_UPDATE="true"
 DISABLE_UPDATE_PROMPT="true"
 COMPLETION_WAITING_DOTS="true"
 
@@ -54,32 +54,7 @@ bindkey '^p' history-search-backward
 bindkey '^n' history-search-forward
 bindkey '^[w' kill-region
 
-# Remove failed commands from history
-autoload -Uz add-zsh-hook
-
-_zsh_no_failed() {
-  local exit_code=$?
-  (( exit_code == 0 )) && return
-
-  local history_file="${HISTFILE:-$HOME/.zsh_history}"
-  local temp_file
-  temp_file=$(mktemp)
-
-  if head -n -1 "$history_file" >"$temp_file" 2>/dev/null; then
-    mv "$temp_file" "$history_file"
-    fc -R "$history_file" 2>/dev/null
-  else
-    rm -f "$temp_file"
-  fi
-}
-
-add-zsh-hook precmd _zsh_no_failed
-
 # Prompt and tools
-if (( $+commands[starship] )); then
-  eval "$(starship init zsh)"
-fi
-
 alias c='clear'
 alias reload='source ~/.zshrc'
 
@@ -108,7 +83,7 @@ fi
 
 # Completion styling
 zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
-zstyle ':completion:*' menu no
+zstyle ':completion:*' menu yes select
 
 # Optional integrations
 if [[ -r "$HOME/.config/opencode/secrets.sh" ]]; then
@@ -119,7 +94,3 @@ if [[ -r /usr/share/doc/pkgfile/command-not-found.zsh ]]; then
   source /usr/share/doc/pkgfile/command-not-found.zsh 2>/dev/null
 fi
 
-# bun completions
-if [[ -s "$HOME/.bun/_bun" ]]; then
-  source "$HOME/.bun/_bun"
-fi
