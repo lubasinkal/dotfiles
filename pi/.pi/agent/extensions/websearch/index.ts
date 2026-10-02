@@ -6,10 +6,9 @@
  *   - "fetch":  fetch a URL and return its text/markdown/html content
  *
  * Backends (first success wins):
- *   1. Tavily  — if TAVILY_API_KEY is set (best quality, needs key)
- *   2. Brave   — if BRAVE_API_KEY is set
- *   3. SearXNG — public JSON instances, or set SEARXNG_URL to your own
- *   4. Hacker News Algolia + DuckDuckGo Instant Answer as keyless fallback
+ *   1. SearXNG — public JSON instances, or set SEARXNG_URL to your own
+ *   2. Tavily  — if TAVILY_API_KEY is set
+ *   3. Brave   — if BRAVE_API_KEY is set
  *
  * Fetch improvements inspired by OpenCode's webfetch.ts:
  *   - TurndownService for proper HTML→markdown conversion
@@ -34,6 +33,7 @@ const MAX_TEXT = 12_000; // ~3k tokens, plenty for results
 const CACHE_TTL = 5 * 60_000;
 const DEFAULT_TIMEOUT = 30_000;
 const MAX_TIMEOUT = 120_000;
+const SEARCH_PROVIDER_TIMEOUT = 8_000;
 const MAX_FETCH_BYTES = 5 * 1024 * 1024;
 
 interface SearchResult {
@@ -150,6 +150,65 @@ function isCloudflareChallenge(status: number, headers: Headers): boolean {
 }
 
 /* ---------- search backends ---------- */
+
+async function ddgHtml(query: string, limit: number, signal?: AbortSignal): Promise<SearchResult[] | null> {
+  const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
+  const res = await fetch(url, {
+    signal,
+    headers: { "User-Agent": UA, Accept: "text/html" },
+  });
+  if (!res.ok) return null;
+
+  const html = await res.text();
+  const results: SearchResult[] = [];
+  let current: Partial<SearchResult> | null = null;
+  let capture: "title" | "snippet" | null = null;
+  let title = "";
+  let snippet = "";
+
+  const parser = new Parser({
+    onopentag(name, attrs) {
+      const classes = (attrs.class ?? "").split(/\s+/);
+      if (name === "a" && classes.includes("result__a")) {
+        current = { url: attrs.href ?? "" };
+        title = "";
+        capture = "title";
+      } else if (current && name === "a") {
+        capture = null;
+      } else if (current && classes.includes("result__snippet")) {
+        capture = "snippet";
+        snippet = "";
+      }
+    },
+    ontext(text) {
+      if (capture === "title") title += text;
+      else if (capture === "snippet") snippet += text;
+    },
+    onclosetag(name) {
+      if (name === "a" && capture === "title" && current) {
+        current.title = title.trim();
+        capture = null;
+      } else if (name === "a") {
+        capture = null;
+      } else if (name === "div" && current && snippet.trim()) {
+        current.snippet = snippet.trim();
+      } else if (name === "div" && current?.title) {
+        if (current.url && current.title) results.push({
+          title: current.title,
+          url: current.url.startsWith("//") ? `https:${current.url}` : current.url,
+          snippet: current.snippet ?? "",
+        });
+        current = null;
+        capture = null;
+      }
+    },
+  });
+  parser.write(html);
+  parser.end();
+
+  const clean = results.filter((result) => result.url && result.title);
+  return clean.length ? clean.slice(0, limit) : null;
+}
 
 async function tavily(query: string, limit: number, signal?: AbortSignal): Promise<SearchResult[] | null> {
   const key = process.env.TAVILY_API_KEY;
@@ -472,19 +531,35 @@ export default function webSearchExtension(pi: ExtensionAPI) {
         const cached = cache.get(key);
         if (cached && Date.now() - cached.at < CACHE_TTL) return ok(cached.text);
 
-        const results =
-          (await tavily(query, limit, signal)) ??
-          (await brave(query, limit, signal)) ??
-          (await searxng(query, limit, signal)) ??
-          (await hnAlgolia(query, limit, signal));
-
-        let finalText: string;
-        if (results?.length) {
-          finalText = formatResults(query, results);
-        } else {
-          const ia = await ddgInstant(query, signal);
-          finalText = ia?.length ? formatResults(query, ia) : `No results found for "${query}".`;
+        const providers = [
+          (providerSignal: AbortSignal) => ddgHtml(query, limit, providerSignal),
+          (providerSignal: AbortSignal) => searxng(query, limit, providerSignal),
+          (providerSignal: AbortSignal) => tavily(query, limit, providerSignal),
+          (providerSignal: AbortSignal) => brave(query, limit, providerSignal),
+        ];
+        let results: SearchResult[] | null = null;
+        for (const provider of providers) {
+          if (signal?.aborted) return err("search aborted");
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), SEARCH_PROVIDER_TIMEOUT);
+          const providerSignal = signal
+            ? AbortSignal.any([signal, controller.signal])
+            : controller.signal;
+          try {
+            results = await provider(providerSignal);
+          } catch {
+            if (signal?.aborted) return err("search aborted");
+            // A provider failure or timeout should not block the next backend.
+          } finally {
+            clearTimeout(timeoutId);
+          }
+          if (results?.length) break;
+          results = null;
         }
+
+        const finalText = results?.length
+          ? formatResults(query, results)
+          : `No results found for "${query}".`;
 
         cache.set(key, { at: Date.now(), text: finalText });
         return ok(finalText);
