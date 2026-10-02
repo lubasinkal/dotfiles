@@ -1,0 +1,110 @@
+{
+  "mcp__context7|https://mcp.context7.com/mcp/oauth": {
+    "serverUrl": "https://mcp.context7.com/mcp/oauth",
+    "discovery": {
+      "authorizationServerUrl": "https://clerk.context7.com",
+      "authorizationServerMetadata": {
+        "issuer": "https://clerk.context7.com",
+        "authorization_endpoint": "https://clerk.context7.com/oauth/authorize",
+        "token_endpoint": "https://clerk.context7.com/oauth/token",
+        "revocation_endpoint": "https://clerk.context7.com/oauth/token/revoke",
+        "device_authorization_endpoint": "https://clerk.context7.com/oauth/device_authorization",
+        "jwks_uri": "https://clerk.context7.com/.well-known/jwks.json",
+        "registration_endpoint": "https://clerk.context7.com/oauth/register",
+        "response_types_supported": [
+          "code"
+        ],
+        "grant_types_supported": [
+          "authorization_code",
+          "refresh_token",
+          "urn:ietf:params:oauth:grant-type:device_code"
+        ],
+        "token_endpoint_auth_methods_supported": [
+          "client_secret_basic",
+          "none",
+          "client_secret_post"
+        ],
+        "scopes_supported": [
+          "openid",
+          "profile",
+          "email",
+          "public_metadata",
+          "private_metadata",
+          "offline_access"
+        ],
+        "subject_types_supported": [
+          "public"
+        ],
+        "id_token_signing_alg_values_supported": [
+          "RS256"
+        ],
+        "claims_supported": [
+          "aud",
+          "email",
+          "email_verified",
+          "exp",
+          "family_name",
+          "given_name",
+          "iat",
+          "iss",
+          "name",
+          "picture",
+          "preferred_username",
+          "sub"
+        ],
+        "service_documentation": "https://clerk.com/docs/oauth/scoped-access",
+        "ui_locales_supported": [
+          "en"
+        ],
+        "op_tos_uri": "https://clerk.com/legal/standard-terms",
+        "code_challenge_methods_supported": [
+          "S256"
+        ],
+        "authorization_response_iss_parameter_supported": true
+      },
+      "resourceMetadata": {
+        "resource": "https://mcp.context7.com",
+        "authorization_servers": [
+          "https://clerk.context7.com",
+          "https://context7.com"
+        ],
+        "scopes_supported": [
+          "profile",
+          "email"
+        ],
+        "bearer_methods_supported": [
+          "header"
+        ]
+      },
+      "resourceMetadataUrl": "https://mcp.context7.com/.well-known/oauth-protected-resource"
+    },
+    "clientInformation": {
+      "client_id": "zJestMwMvBtp1cd4",
+      "client_id_issued_at": 1790928392789,
+      "client_secret_expires_at": 0,
+      "client_name": "pi",
+      "redirect_uris": [
+        "http://127.0.0.1:45215/callback"
+      ],
+      "grant_types": [
+        "authorization_code"
+      ],
+      "response_types": [
+        "code"
+      ],
+      "scope": "email offline_access profile",
+      "token_endpoint_auth_method": "none",
+      "application_type": "web"
+    },
+    "oauthState": "540cc2496f192e6e6efa14698fbc9d9faa55467992b1f07943389bfdd85fcdbd",
+    "codeVerifier": "wT-tb_R9tUxeGkWdhF4k4owBUtbdg6rca4llK8CVYvc",
+    "tokens": {
+      "access_token": "oat_OT674Y2D9HGXBAWV5A9TDCSTEP5364Y5",
+      "token_type": "bearer",
+      "expires_in": 1209600,
+      "scope": "profile email offline_access",
+      "refresh_token": "MTEWZDKZNJETZJYXYS01NMVILTHMNWMTZDJHZTZKNTDMMWFM"
+    },
+    "tokensExpireAt": 1792138024697
+  }
+}

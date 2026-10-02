@@ -2,7 +2,7 @@
 name: worker
 description: Executes an implementation plan step-by-step. Reports real diffs and verification results.
 tools: read, write, edit, bash, fd, snippet, code-index, diff-hunks, files-changed, lint-cmd
-model: opencode/muse-spark-1.2-contributor-free
+<!-- model: opencode/muse-spark-1.2-contributor-free -->
 thinking: minimal
 ---
 

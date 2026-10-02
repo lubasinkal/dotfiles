@@ -2,7 +2,7 @@
 name: scout
 description: Fast codebase recon. Returns file:line-cited findings for handoff to other agents.
 tools: read, fd, snippet, code-index, files-changed, diff-hunks
-model: opencode/muse-spark-1.2-contributor-free
+<!-- model: opencode/muse-spark-1.2-contributor-free -->
 thinking: low
 ---
 
