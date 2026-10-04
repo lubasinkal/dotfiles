@@ -2,7 +2,7 @@
   "mcpServers": {
     "Astro_docs": {
       "url": "https://mcp.docs.astro.build/mcp",
-      "description": "Search and read the product documentation"
+      "description": "Search and read the Astro documentation"
     },
     "context7": {
       "url": "https://mcp.context7.com/mcp/oauth",
