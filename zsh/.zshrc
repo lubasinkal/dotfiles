@@ -17,7 +17,7 @@ source "$ZINIT_HOME/zinit.zsh"
 zinit light romkatv/powerlevel10k
 [[ ! -f "$HOME/.p10k.zsh" ]] || source "$HOME/.p10k.zsh"
 
-zinit light zsh-users/zsh-autosuggestions
+zinit light Giammarco-Ferranti/deja
 zinit light zsh-users/zsh-syntax-highlighting
 
 # History
@@ -25,15 +25,15 @@ HISTSIZE=50000
 SAVEHIST=50000
 HISTFILE="$HOME/.zsh_history"
 
+# options
+setopt append_history
 setopt share_history
-setopt inc_append_history
-setopt hist_ignore_all_dups
-setopt hist_ignore_space
-setopt hist_reduce_blanks
-setopt hist_verify
+setopt hist_ignore_dups
 setopt hist_expire_dups_first
-setopt hist_save_no_dups
 setopt hist_find_no_dups
+setopt hist_reduce_blanks
+setopt no_beep
+setopt inc_append_history
 
 export HISTORY_IGNORE="(&|[bf]g|c|clear|history|exit|q|pwd|* --help)"
 
