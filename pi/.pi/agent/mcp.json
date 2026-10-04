@@ -7,6 +7,12 @@
     "context7": {
       "url": "https://mcp.context7.com/mcp/oauth",
       "exposure": "direct"
+    },
+    "radius": {
+      "url": "https://radius.pi.dev/mcp",
+      "auth": {
+        "provider": "radius"
+      }
     }
   }
 }
