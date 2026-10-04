@@ -1,35 +1,18 @@
-# Bootstrap Oh My Zsh on fresh devices
-export ZSH="${ZSH:-$HOME/.oh-my-zsh}"
-
-if [[ ! -f "$ZSH/oh-my-zsh.sh" ]]; then
-  git clone --depth 1 https://github.com/ohmyzsh/ohmyzsh.git "$ZSH" 2>/dev/null
+# Bootstrap Zinit if missing
+ZINIT_HOME="${XDG_DATA_HOME:-$HOME/.local/share}/zinit/zinit.git"
+if [[ ! -d "$ZINIT_HOME/.git" ]]; then
+  mkdir -p "${ZINIT_HOME:h}"
+  git clone https://github.com/zdharma-continuum/zinit.git "$ZINIT_HOME"
 fi
+source "$ZINIT_HOME/zinit.zsh"
 
-# Bootstrap custom plugins if missing
-for plugin in zsh-autosuggestions zsh-syntax-highlighting; do
-  if [[ ! -d "$ZSH/custom/plugins/$plugin" ]]; then
-    git clone --depth 1 "https://github.com/zsh-users/$plugin" "$ZSH/custom/plugins/$plugin" 2>/dev/null
-  fi
-done
+# Powerlevel10k prompt
+zinit light romkatv/powerlevel10k
+[[ ! -f "$HOME/.p10k.zsh" ]] || source "$HOME/.p10k.zsh"
 
-ZSH_THEME="refined"
-DISABLE_AUTO_UPDATE="true"
-DISABLE_UPDATE_PROMPT="true"
-COMPLETION_WAITING_DOTS="true"
-
-plugins=(
-  git
-  gh
-  eza
-  mise
-  docker
-  bun
-  fzf
-  zsh-autosuggestions
-  zsh-syntax-highlighting
-)
-
-source "$ZSH/oh-my-zsh.sh"
+zinit light zsh-users/zsh-completions
+zinit light zsh-users/zsh-autosuggestions
+zinit light zsh-users/zsh-syntax-highlighting
 
 # History
 HISTSIZE=50000
