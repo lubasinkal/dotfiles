@@ -29,25 +29,13 @@ cd ~/dotfiles
 ./install.sh
 ```
 
-The script restows every package into `$HOME`. To undo everything: `./install.sh --delete`.
+The script previews every package before changing anything and asks you to confirm. To undo the links, run `./install.sh --delete` and type `DELETE` at the confirmation prompt.
 
-If stow reports a conflict, a real file already exists at the target path — move or delete it first, then re-run.
+If the preview reports a conflict, a real file already exists at the target path — move or back it up first, then re-run. The installer only manages dotfile links; it does not install system packages or applications.
 
-### Post-install steps
+After Stow succeeds, the installer initializes Git submodules and installs TPM if it is not already present. To install tmux plugins, open tmux and press prefix (Ctrl-b) + Shift-i.
 
-```bash
-# Tmux plugins (TPM)
-git clone https://github.com/tmux-plugins/tpm ~/.config/tmux/plugins/tpm
-tmux   # then press prefix (Ctrl-b) + Shift-i
-
-# Opencode secrets: create an untracked file with real values
-cat > ~/.config/opencode/secrets.sh <<'EOF'
-export CONTEXT7_API_KEY="..."
-export N8N_MCP_TOKEN="..."
-EOF
-```
-
-`.zshrc` sources `~/.config/opencode/secrets.sh` automatically if present. Sensitive values in `opencode.json` are referenced as `{env:VAR}` placeholders.
+If you use Opencode secrets, create the untracked `~/.config/opencode/secrets.sh` file with your real values. `.zshrc` sources it automatically if present. Sensitive values in `opencode.json` are referenced as `{env:VAR}` placeholders.
 
 ## Adding a new tool
 
