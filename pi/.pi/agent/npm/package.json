@@ -1,11 +1,10 @@
 {
   "name": "pi-extensions",
   "private": true,
-  "dependencies": {
-    "@ollama/pi-web-search": "^0.0.5",
-    "pi-web-access": "^0.35.0"
-  },
   "allowScripts": {
     "better-sqlite3": true
+  },
+  "dependencies": {
+    "pi-web-access": "^0.35.0"
   }
 }
