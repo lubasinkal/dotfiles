@@ -17,6 +17,8 @@ source "$ZINIT_HOME/zinit.zsh"
 zinit light romkatv/powerlevel10k
 [[ ! -f "$HOME/.p10k.zsh" ]] || source "$HOME/.p10k.zsh"
 
+# super smart autosuggestions
+zinit ice wait"0" lucid depth=1 pick"deja.plugin.zsh"
 zinit light Giammarco-Ferranti/deja
 zinit light zsh-users/zsh-syntax-highlighting
 
@@ -45,7 +47,7 @@ bindkey '^[w' kill-region
 
 # Prompt and tools
 alias c='clear'
-alias reload='source ~/.zshrc'
+alias reload='exec zsh'
 
 if (( $+commands[bun] )); then
   alias bunupdate='(cd ~/.bun/install/global && bun update --latest)'
@@ -83,6 +85,4 @@ if [[ -r /usr/share/doc/pkgfile/command-not-found.zsh ]]; then
   source /usr/share/doc/pkgfile/command-not-found.zsh 2>/dev/null
 fi
 
-# To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
-[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 
