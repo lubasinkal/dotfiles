@@ -12,6 +12,7 @@
   "theme": "system",
   "tuiMode": "fullscreen",
   "packages": [
-    "npm:@ollama/pi-web-search"
+    "npm:@ollama/pi-web-search",
+    "npm:pi-web-access"
   ]
 }
