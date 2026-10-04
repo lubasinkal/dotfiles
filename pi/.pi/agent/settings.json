@@ -9,8 +9,8 @@
   "terminal": {
     "showTerminalProgress": true
   },
-  "theme": "dark",
-  "tuiMode": "regular",
+  "theme": "system",
+  "tuiMode": "fullscreen",
   "packages": [
     "npm:@ollama/pi-web-search"
   ]
