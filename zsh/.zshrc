@@ -13,14 +13,23 @@ if [[ ! -d "$ZINIT_HOME/.git" ]]; then
 fi
 source "$ZINIT_HOME/zinit.zsh"
 
+# Initialize completion before completion plugins
+autoload -Uz compinit
+compinit
+
 # Powerlevel10k prompt
 zinit light romkatv/powerlevel10k
 [[ ! -f "$HOME/.p10k.zsh" ]] || source "$HOME/.p10k.zsh"
 
-# super smart autosuggestions
+# Deja autosuggestions (leave Tab available for zsh completion)
+export DEJA_CYCLE_KEY=''
 zinit ice wait"0" lucid depth=1 pick"deja.plugin.zsh"
 zinit light Giammarco-Ferranti/deja
 zinit light zsh-users/zsh-syntax-highlighting
+
+# Oh My Zsh plugins
+zinit snippet OMZP::bun
+zinit snippet OMZP::git
 
 # History
 HISTSIZE=50000
@@ -40,7 +49,7 @@ setopt inc_append_history
 export HISTORY_IGNORE="(&|[bf]g|c|clear|history|exit|q|pwd|* --help)"
 
 # Key bindings
-bindkey -e
+bindkey -v
 bindkey '^p' history-search-backward
 bindkey '^n' history-search-forward
 bindkey '^[w' kill-region
@@ -74,7 +83,10 @@ fi
 
 # Completion styling
 zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
-zstyle ':completion:*' menu yes select
+zstyle ':completion:*' menu no
+
+# Load last so it can wrap completion widgets from other plugins
+zinit light Aloxaf/fzf-tab
 
 # Optional integrations
 if [[ -r "$HOME/.config/opencode/secrets.sh" ]]; then
