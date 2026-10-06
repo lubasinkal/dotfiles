@@ -5,6 +5,6 @@
     "better-sqlite3": true
   },
   "dependencies": {
-    "pi-web-access": "^0.35.0"
+    "pi-web-access": "^0.37.0"
   }
 }

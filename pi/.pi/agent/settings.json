@@ -5,7 +5,7 @@
   "defaultThinkingLevel": "minimal",
   "enableInstallTelemetry": false,
   "hideThinkingBlock": true,
-  "lastChangelogVersion": "1.0.2",
+  "lastChangelogVersion": "1.0.4",
   "terminal": {
     "showTerminalProgress": true
   },
