@@ -76,6 +76,8 @@ fi
 zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
 zstyle ':completion:*' menu no
 zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
+zstyle ':fzf-tab:complete:cd:*' fzf-preview 'ls --color $realpath'
+zstyle ':fzf-tab:complete:__zoxide_z:*' fzf-preview 'ls --color $realpath'
 
 # Load syntax highlighting after completion plugins.
 zinit light Aloxaf/fzf-tab
@@ -90,3 +92,6 @@ if [[ -r /usr/share/doc/pkgfile/command-not-found.zsh ]]; then
 fi
 
 # Configure the prompt with `p10k configure` or edit ~/.p10k.zsh.
+
+# To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
+[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
