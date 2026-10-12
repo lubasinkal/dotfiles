@@ -8,12 +8,10 @@ import { RULES } from "./rules.js";
 /** Analyze a command. Returns flags in severity order (block → rewrite → hint). */
 export function lint(cmd: string): LintFlag[] {
 	const flags: LintFlag[] = [];
-	const seen = new Set<string>();
 
 	for (const rule of RULES) {
 		const m = rule.re.exec(cmd);
 		if (!m) continue;
-		seen.add(rule.id);
 		const flag: LintFlag = {
 			id: rule.id,
 			severity: rule.severity,
