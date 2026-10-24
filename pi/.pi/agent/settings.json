@@ -13,5 +13,8 @@
   "tuiMode": "fullscreen",
   "packages": [
     "npm:pi-web-access"
-  ]
+  ],
+  "warnings": {
+    "anthropicExtraUsage": false
+  }
 }

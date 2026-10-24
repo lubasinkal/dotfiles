@@ -95,3 +95,6 @@ fi
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 
+
+# bun completions
+[ -s "/home/lubasi/.bun/_bun" ] && source "/home/lubasi/.bun/_bun"
