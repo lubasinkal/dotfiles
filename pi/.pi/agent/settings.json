@@ -1,8 +1,8 @@
 {
   "collapseChangelog": true,
-  "defaultModel": "gpt-6-luna",
-  "defaultProvider": "openai-codex",
-  "defaultThinkingLevel": "minimal",
+  "defaultModel": "glm-5.3-flash",
+  "defaultProvider": "opencode-go",
+  "defaultThinkingLevel": "high",
   "enableInstallTelemetry": false,
   "hideThinkingBlock": true,
   "lastChangelogVersion": "1.4.0",
