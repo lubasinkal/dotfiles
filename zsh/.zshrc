@@ -77,6 +77,7 @@ if [[ -s "$HOME/.bun/_bun" ]]; then
 fi
 
 if (( $+commands[zoxide] )); then
+  unalias zi 2>/dev/null  # zinit defines `zi`, freeing it for zoxide's interactive jump
   eval "$(zoxide init zsh)"
 fi
 
