@@ -19,14 +19,6 @@ compinit
 zinit light romkatv/powerlevel10k
 [[ ! -f "$HOME/.p10k.zsh" ]] || source "$HOME/.p10k.zsh"
 
-# Autosuggestions
-export DEJA_CYCLE_KEY=''
-zinit ice wait"0" lucid depth=1 pick"deja.plugin.zsh"
-zinit light Giammarco-Ferranti/deja
-
-zinit snippet OMZP::bun
-zinit snippet OMZP::git
-
 HISTSIZE=50000
 SAVEHIST=50000
 HISTFILE="$HOME/.zsh_history"
@@ -34,9 +26,7 @@ HISTFILE="$HOME/.zsh_history"
 # History behavior
 setopt share_history
 setopt hist_ignore_dups
-setopt hist_expire_dups_first
-setopt hist_find_no_dups
-setopt hist_reduce_blanks
+setopt hist_ignore_space
 setopt no_beep
 
 export HISTORY_IGNORE="(&|[bf]g|c|clear|history|exit|q|pwd|* --help)"
@@ -44,7 +34,6 @@ export HISTORY_IGNORE="(&|[bf]g|c|clear|history|exit|q|pwd|* --help)"
 bindkey -v
 bindkey '^p' history-search-backward
 bindkey '^n' history-search-forward
-bindkey '^[w' kill-region
 
 alias c='clear'
 alias reload='exec zsh'
@@ -81,13 +70,6 @@ if (( $+commands[zoxide] )); then
   eval "$(zoxide init zsh)"
 fi
 
-if [[ -r "$HOME/.atuin/bin/env" ]]; then
-  source "$HOME/.atuin/bin/env"
-  if (( $+commands[atuin] )); then
-    eval "$(atuin init zsh --disable-ctrl-r)"
-  fi
-fi
-
 if (( $+commands[fzf] )); then
   eval "$(fzf --zsh)" 2>/dev/null
 fi
@@ -102,19 +84,3 @@ zstyle ':fzf-tab:complete:__zoxide_z:*' fzf-preview 'ls --color $realpath'
 # Load syntax highlighting after completion plugins.
 zinit light Aloxaf/fzf-tab
 zinit light zsh-users/zsh-syntax-highlighting
-
-if [[ -r "$HOME/.config/opencode/secrets.sh" ]]; then
-  source "$HOME/.config/opencode/secrets.sh"
-fi
-
-if [[ -r /usr/share/doc/pkgfile/command-not-found.zsh ]]; then
-  source /usr/share/doc/pkgfile/command-not-found.zsh 2>/dev/null
-fi
-
-# Configure the prompt with `p10k configure` or edit ~/.p10k.zsh.
-
-# To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
-
-
-# bun completions
-[ -s "/home/lubasi/.bun/_bun" ] && source "/home/lubasi/.bun/_bun"
