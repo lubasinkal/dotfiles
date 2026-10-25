@@ -49,6 +49,25 @@ bindkey '^[w' kill-region
 alias c='clear'
 alias reload='exec zsh'
 
+if (( $+commands[nvim] )); then
+  export EDITOR='nvim'
+  export VISUAL='nvim'
+  alias v='nvim'
+fi
+
+# Launch Yazi; `q` exits into the directory you were viewing.
+if (( $+commands[yazi] )); then
+  function y() {
+    local tmp cwd
+    tmp="$(mktemp -t yazi-cwd.XXXXXX)"
+    yazi "$@" --cwd-file="$tmp"
+    if cwd="$(command cat -- "$tmp")" && [[ -n "$cwd" && "$cwd" != "$PWD" ]]; then
+      builtin cd -- "$cwd"
+    fi
+    command rm -f -- "$tmp"
+  }
+fi
+
 if (( $+commands[bun] )); then
   alias bunupdate='(cd ~/.bun/install/global && bun update --latest)'
 fi

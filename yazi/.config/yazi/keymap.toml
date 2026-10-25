@@ -1,0 +1,10 @@
+# https://yazi-rs.github.io/docs/configuration/keymap
+# Anything not listed here keeps Yazi's default bindings.
+# Section is [mgr] as of Yazi 25.3 (formerly [manager]).
+
+[mgr]
+prepend_keymap = [
+	# Examples — uncomment or adapt as needed:
+	# { on = "<C-s>", run = "shell --block --interactive", desc = "Run a blocking shell command" },
+	# { on = [ "g", "p" ], run = "cd ~/dev", desc = "Go to ~/dev" },
+]
