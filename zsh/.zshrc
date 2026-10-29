@@ -11,6 +11,9 @@ if [[ ! -d "$ZINIT_HOME/.git" ]]; then
 fi
 source "$ZINIT_HOME/zinit.zsh"
 
+# Completion definitions must land in fpath before compinit scans it.
+zinit light zsh-users/zsh-completions
+
 # Initialize completions before loading plugins.
 autoload -Uz compinit
 compinit
@@ -81,6 +84,12 @@ zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
 zstyle ':fzf-tab:complete:cd:*' fzf-preview 'ls --color $realpath'
 zstyle ':fzf-tab:complete:__zoxide_z:*' fzf-preview 'ls --color $realpath'
 
-# Load syntax highlighting after completion plugins.
+# fzf-tab must load before plugins that wrap completion widgets.
 zinit light Aloxaf/fzf-tab
+
+# Fish-like autosuggestions (ghost text), then syntax highlighting last.
+zinit light zsh-users/zsh-autosuggestions
+ZSH_AUTOSUGGEST_STRATEGY=('history' 'completion')
+ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=8'
+
 zinit light zsh-users/zsh-syntax-highlighting
