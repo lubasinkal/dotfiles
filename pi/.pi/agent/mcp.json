@@ -6,7 +6,8 @@
     },
     "context7": {
       "url": "https://mcp.context7.com/mcp/oauth",
-      "exposure": "direct"
+      "exposure": "direct",
+      "enabled": false
     }
- }
+  }
 }
