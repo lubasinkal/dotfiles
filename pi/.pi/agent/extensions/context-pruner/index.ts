@@ -298,10 +298,15 @@ export default function (pi: ExtensionAPI) {
 		}
 		prevCumulative = prunedTotal;
 
-		// Footer counter for the status line; only touch it when the value moves.
+		// Above the editor, next to the status line's work widget; the footer stays
+		// free of context bookkeeping. Only touch it when the value moves.
 		if (prunedTotal !== lastStatusPruned) {
 			lastStatusPruned = prunedTotal;
-			ctx.ui.setStatus("pruner", prunedTotal > 0 ? `✂ ${formatBytes(prunedTotal)}` : undefined);
+			ctx.ui.setWidget(
+				"context-pruned",
+				prunedTotal > 0 ? [`✂ ${formatBytes(prunedTotal)} pruned`] : undefined,
+				{ placement: "aboveEditor" },
+			);
 		}
 
 		// Return modified messages (required for changes to take effect)

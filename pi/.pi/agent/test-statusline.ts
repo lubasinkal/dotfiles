@@ -71,13 +71,13 @@ const footerLine = footer.render(120).join("\n");
 ok("footer shows cwd", footerLine.includes("dotfiles"), footerLine);
 ok("footer shows branch", footerLine.includes("(master)"));
 ok("footer shows tokens", footerLine.includes("↑1.2k") && footerLine.includes("↓340"), footerLine);
-ok("footer shows ctx percent", footerLine.includes("42%"));
 ok("footer shows cost", footerLine.includes("$0.42"));
 ok("footer shows model", footerLine.includes("opencode-go/mimo-v2.6-flash"), footerLine);
 ok("footer shows thinking", footerLine.includes("✻ high"));
 ok("footer stays a single line", footer.render(120).length === 1, String(footer.render(120).length));
 ok("footer no longer duplicates task info", !/tasks/.test(footerLine), footerLine);
 ok("footer no longer duplicates bg info", !/running/.test(footerLine), footerLine);
+ok("footer drops context percent", !/42%/.test(footerLine), footerLine);
 
 // ── widget: work in flight ────────────────────────────────────────
 const widgetLines = widget.factory({ requestRender() {} }, theme).render(120);
@@ -86,6 +86,8 @@ ok("widget shows task progress", widgetText.includes("1/3 tasks"), widgetText);
 ok("widget names the next task by priority", widgetText.includes("next: fix bug"), widgetText);
 ok("widget counts running bg jobs", widgetText.includes("1 running"), widgetText);
 ok("widget names the oldest bg job", widgetText.includes("npm run build"), widgetText);
+ok("widget shows context usage", widgetText.includes("ctx 42%"), widgetText);
+ok("widget shows context window detail", /ctx 42% · 2k\/200k/.test(widgetText), widgetText);
 ok("widget lines fit the width", widgetLines.every((l: string) => l.length <= 120));
 
 // ── widget: idle state takes no space ─────────────────────────────
@@ -94,8 +96,16 @@ branch[0] = taskEntry([]);
 rmSync(bgDir, { recursive: true, force: true });
 // bg stats are cached for 2s; wait it out rather than reaching into the module.
 await new Promise((r) => setTimeout(r, 2100));
+
+// Context still unknown (e.g. right after compaction) and no work in flight.
+ctx.getContextUsage = () => ({ tokens: null, contextWindow: 200000, percent: null });
 const idle = widget.factory({ requestRender() {} }, theme).render(120);
 ok("widget renders nothing when idle", idle.length === 0, JSON.stringify(idle));
+
+// Only context known: one line, no task/job lines.
+ctx.getContextUsage = () => ({ tokens: 1540, contextWindow: 200000, percent: 1 });
+const ctxOnly = widget.factory({ requestRender() {} }, theme).render(120);
+ok("widget shows only context when nothing else is in flight", ctxOnly.length === 1 && /ctx 1%/.test(ctxOnly[0]), JSON.stringify(ctxOnly));
 
 // ── footer survives a narrow terminal ─────────────────────────────
 ok("narrow footer still renders", footer.render(40).length >= 1);

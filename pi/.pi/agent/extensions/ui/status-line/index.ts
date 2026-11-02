@@ -58,6 +58,10 @@ function bgInfo(now: number): { running: number; label?: string } {
 	return bgCache;
 }
 
+function fmtTokens(n: number): string {
+	return n < 1000 ? `${n}` : n < 1_000_000 ? `${(n / 1000).toFixed(0)}k` : `${(n / 1_000_000).toFixed(1)}M`;
+}
+
 /** First open task, highest priority first (mirrors the task tool's ordering). */
 function nextTask(tasks: readonly { id: number; text: string; done: boolean; priority?: string }[]) {
 	const rank: Record<string, number> = { high: 0, normal: 1, low: 2 };
@@ -128,6 +132,7 @@ export default function (pi: ExtensionAPI) {
 				invalidate() {},
 				render(width: number): string[] {
 					const lines: string[] = [];
+					// Work in flight + context headroom live above the editor.
 					const { tasks } = branchTotals(ctx.sessionManager.getBranch());
 					if (tasks && tasks.total > 0) {
 						const pending = tasks.total - tasks.done;
@@ -141,6 +146,16 @@ export default function (pi: ExtensionAPI) {
 					if (bg.running > 0) {
 						const label = `${bg.running} running` + (bg.label ? ` · ${bg.label}` : "");
 						lines.push(widgetTheme.fg("warning", label));
+					}
+					const usage = ctx.getContextUsage?.();
+					if (usage?.tokens != null && usage?.percent != null && Number.isFinite(usage.percent)) {
+						const pct = Math.round(usage.percent);
+						const color = pct >= 80 ? "error" : pct >= 60 ? "warning" : "dim";
+						const detail =
+							width >= 60 && usage.contextWindow > 0
+								? ` · ${fmtTokens(usage.tokens)}/${fmtTokens(usage.contextWindow)}`
+								: "";
+						lines.push(widgetTheme.fg(color, `ctx ${pct}%${detail}`));
 					}
 					return lines.map((line) => truncateToWidth(` ${line}`, width));
 				},
@@ -164,7 +179,6 @@ export default function (pi: ExtensionAPI) {
 					const raw = footerData.getExtensionStatuses() as unknown;
 					const statuses: string[] = (raw instanceof Map ? [...(raw as Map<string,string>).values()] : Array.isArray(raw) ? raw : raw && typeof raw === "object" ? Object.values(raw as Record<string,string>) : []) as string[];
 					const filtered = statuses.filter(Boolean) as string[];
-					const ctxUsage = ctx.getContextUsage?.();
 
 					// Left: directory (branch) · ↑in ↓out [ctx%] · $cost
 					const leftParts: string[] = [];
@@ -176,13 +190,6 @@ export default function (pi: ExtensionAPI) {
 					// Work in flight lives in the widget above the editor, not here.
 					let tokenStr =
 						theme.fg("dim", `↑`) + theme.fg("accent", fmt(input)) + theme.fg("dim", " ↓") + theme.fg("accent", fmt(output));
-					if (ctxUsage?.tokens != null && ctxUsage?.percent != null && width >= 70) {
-						const pct = Math.round(ctxUsage.percent);
-						if (Number.isFinite(pct)) {
-							const color = pct >= 80 ? "error" : pct >= 60 ? "warning" : "dim";
-							tokenStr += theme.fg("dim", " ") + theme.fg(color, `${pct}%`);
-						}
-					}
 					leftParts.push(tokenStr);
 					if (cost > 0) leftParts.push(theme.fg("success", fmtCost(cost)));
 

@@ -81,7 +81,7 @@ All of them need `node_modules/` in this directory. `install.sh` symlinks it to
 - **No memory or skills installed yet** — `memory/` and `skills/` are the intended homes (both gitignored/absent). New-machine clones start without them.
 - **`tasks.json`** is written only when a task call sets `persist: true`; it is not in `.gitignore` (it lives outside the repo, under `~/.pi/agent/`).
 - **`bg` tasks outlive the session by design** — detached process groups keep running after pi exits. Stop servers/watchers explicitly (`bg stop`), and `bg clean` drops finished entries. Logs/meta live in `~/.pi/agent/bg/`.
-- **Footer work indicators** are split: the footer below the editor shows only identity and resources (dir, branch, tokens, ctx%, cost, model, plus any `setStatus` text from other extensions), while tasks and running `bg` jobs live in a widget above the editor that renders nothing when idle. Task counts come from the branch; running jobs from `~/.pi/agent/bg/`, refreshed at most every 2s. The pruner publishes its `✂` status only after it prunes.
+- **UI split**: the footer below the editor shows identity and resources only (dir, branch, tokens, cost, model, plus any `setStatus` text from other extensions). Context usage, tasks and running `bg` jobs render as widget lines above the editor: `1/3 tasks · next: …`, `1 running · …`, `ctx 42% · 84k/200k`, and `✂ 12 KB pruned` from the pruner. The widget emits no lines when nothing is known or in flight. Task counts come from the branch; running jobs from `~/.pi/agent/bg/`, refreshed at most every 2s.
 - **`node_modules/` (typecheck deps) is a gitignored symlink** — recreate it before `tsc --noEmit` works on a fresh clone.
 
 ## Bundled binaries
