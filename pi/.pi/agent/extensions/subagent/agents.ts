@@ -25,10 +25,31 @@ export interface AgentDiscoveryResult {
 }
 
 /**
- * Normalize a frontmatter `tools` value. Both spellings occur in the wild:
- * `tools: read, bash` and `tools: [read, bash]`. Anything else yields no tools
- * rather than throwing — discovery runs over every file in the directory, so a
- * single bad agent must not take the rest down.
+ * Raw agent frontmatter. Values are `unknown` because `parseFrontmatter` runs a
+ * real YAML parser, so any scalar or collection can appear here.
+ *
+ * A type alias rather than an interface: `parseFrontmatter` constrains its
+ * parameter to `Record<string, unknown>`, and only an alias picks up the
+ * implicit index signature that satisfies it.
+ */
+type AgentFrontmatter = {
+	name?: unknown;
+	description?: unknown;
+	tools?: unknown;
+	model?: unknown;
+};
+
+/**
+ * Normalize a frontmatter `tools` value to a list of tool names.
+ *
+ * Both spellings are valid YAML and both are in use:
+ *
+ *     tools: read, bash        # string
+ *     tools: [read, bash]      # array
+ *
+ * so accept either. Anything else (a number, a map, a nested list) yields no
+ * tools rather than throwing: this runs inside agent discovery, where a single
+ * bad file must not take down every other agent in the same directory.
  */
 function parseToolList(value: unknown): string[] | undefined {
 	const raw = Array.isArray(value) ? value : typeof value === "string" ? value.split(",") : [];
@@ -65,9 +86,7 @@ function loadAgentsFromDir(dir: string, source: "user" | "project"): AgentConfig
 			continue;
 		}
 
-		// Frontmatter values are `unknown`: a real YAML parser produces scalars,
-		// lists and maps, and `tools: [read, bash]` must not throw here.
-		const { frontmatter, body } = parseFrontmatter<Record<string, unknown>>(content);
+		const { frontmatter, body } = parseFrontmatter<AgentFrontmatter>(content);
 
 		if (typeof frontmatter.name !== "string" || typeof frontmatter.description !== "string") {
 			continue;
@@ -129,3 +148,12 @@ export function discoverAgents(cwd: string, scope: AgentScope): AgentDiscoveryRe
 	return { agents: Array.from(agentMap.values()), projectAgentsDir };
 }
 
+export function formatAgentList(agents: AgentConfig[], maxItems: number): { text: string; remaining: number } {
+	if (agents.length === 0) return { text: "none", remaining: 0 };
+	const listed = agents.slice(0, maxItems);
+	const remaining = agents.length - listed.length;
+	return {
+		text: listed.map((a) => `${a.name} (${a.source}): ${a.description}`).join("; "),
+		remaining,
+	};
+}

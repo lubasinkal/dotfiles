@@ -1,7 +1,7 @@
 ---
-description: Full implementation workflow — scout gathers context, planner creates plan, worker implements
+description: Scout, plan, then implement — one subagent chain
 argument-hint: "[task]"
 ---
-Use the subagent tool with chain for: $@.
+Run a subagent chain for: $@.
 
-Pass each result as {previous}. Stop and report if the plan is ambiguous, a check fails non-trivially, or the worker reports out-of-scope files.
+Pass each result to the next step as `{previous}`. Stop and report if the plan is ambiguous, a check fails non-trivially, or the worker touches files outside the plan.

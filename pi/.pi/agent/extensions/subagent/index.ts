@@ -16,23 +16,25 @@ import { spawn } from "node:child_process";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import type { AgentToolResult } from "@earendil-works/pi-agent-core";
+import type { AgentToolResult, ThinkingLevel } from "@earendil-works/pi-agent-core";
 import type { Message } from "@earendil-works/pi-ai";
 import { StringEnum } from "@earendil-works/pi-ai";
 import {
+	CONFIG_DIR_NAME,
 	type ExtensionAPI,
+	formatReadLineRange,
+	getAgentDir,
 	getMarkdownTheme,
 	withFileMutationQueue,
 } from "@earendil-works/pi-coding-agent";
 import { Container, Markdown, Spacer, Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
-import { type AgentConfig, type AgentScope, discoverAgents } from "./agents.js";
+import { type AgentConfig, type AgentScope, discoverAgents } from "./agents.ts";
 
 const MAX_PARALLEL_TASKS = 8;
 const MAX_CONCURRENCY = 4;
 const COLLAPSED_ITEM_COUNT = 10;
 const PER_TASK_OUTPUT_CAP = 50 * 1024;
-const STDERR_CAP = 64 * 1024;
 
 function formatTokens(count: number): string {
 	if (count < 1000) return count.toString();
@@ -86,13 +88,10 @@ function formatToolCall(
 		case "read": {
 			const rawPath = (args.file_path || args.path || "...") as string;
 			const filePath = shortenPath(rawPath);
-			const offset = args.offset as number | undefined;
-			const limit = args.limit as number | undefined;
+			const lineRange = formatReadLineRange(args.offset, args.limit);
 			let text = themeFg("accent", filePath);
-			if (offset !== undefined || limit !== undefined) {
-				const startLine = offset ?? 1;
-				const endLine = limit !== undefined ? startLine + limit - 1 : "";
-				text += themeFg("warning", `:${startLine}${endLine ? `-${endLine}` : ""}`);
+			if (lineRange) {
+				text += themeFg("warning", lineRange);
 			}
 			return themeFg("muted", "read ") + text;
 		}
@@ -125,35 +124,6 @@ function formatToolCall(
 				themeFg("muted", "grep ") +
 				themeFg("accent", `/${pattern}/`) +
 				themeFg("dim", ` in ${shortenPath(rawPath)}`)
-			);
-		}
-		case "fd": {
-			const pattern = (args.pattern || "") as string;
-			const rawPath = (args.path || ".") as string;
-			return (
-				themeFg("muted", "fd ") +
-				themeFg("accent", pattern || "*") +
-				themeFg("dim", ` in ${shortenPath(rawPath)}`)
-			);
-		}
-		case "snippet": {
-			const query = (args.query || "") as string;
-			const rawPath = (args.path || ".") as string;
-			return (
-				themeFg("muted", "snippet ") +
-				themeFg("accent", `/${query}/`) +
-				themeFg("dim", ` in ${shortenPath(rawPath)}`)
-			);
-		}
-		case "code-index": {
-			const query = (args.query || "") as string;
-			return themeFg("muted", "code-index ") + themeFg("accent", query || "(summary)");
-		}
-		case "diff-hunks": {
-			const paths = args.paths as string[] | undefined;
-			return (
-				themeFg("muted", "diff-hunks ") +
-				themeFg("dim", paths?.length ? paths.join(", ") : "(working tree)")
 			);
 		}
 		default: {
@@ -292,8 +262,14 @@ function getPiInvocation(args: string[]): { command: string; args: string[] } {
 
 type OnUpdateCallback = (partial: AgentToolResult<SubagentDetails>) => void;
 
+interface DispatchDefaults {
+	model?: string;
+	thinkingLevel?: ThinkingLevel;
+}
+
 async function runSingleAgent(
 	defaultCwd: string,
+	dispatchDefaults: DispatchDefaults,
 	agents: AgentConfig[],
 	agentName: string,
 	task: string,
@@ -302,8 +278,6 @@ async function runSingleAgent(
 	signal: AbortSignal | undefined,
 	onUpdate: OnUpdateCallback | undefined,
 	makeDetails: (results: SingleResult[]) => SubagentDetails,
-	modelOverride?: string,
-	dispatchDefaults?: { model?: string; thinkingLevel?: string },
 ): Promise<SingleResult> {
 	const agent = agents.find((a) => a.name === agentName);
 
@@ -322,17 +296,13 @@ async function runSingleAgent(
 	}
 
 	const args: string[] = ["--mode", "json", "-p", "--no-session"];
-	// Without an explicit model the child used pi's own default, command -v can differ
-	// from the session that dispatched it; inherit instead.
-	const inheritsDispatch = !modelOverride && !agent.model;
-	const effectiveModel = modelOverride ?? agent.model ?? dispatchDefaults?.model;
-	if (effectiveModel) args.push("--model", effectiveModel);
+	const inheritsDispatchConfig = !agent.model;
+	const model = agent.model ?? dispatchDefaults.model;
+	if (model) args.push("--model", model);
+	// An agent's own level wins; otherwise inherit the dispatcher's.
+	const thinking = agent.thinking ?? (inheritsDispatchConfig ? dispatchDefaults.thinkingLevel : undefined);
+	if (thinking) args.push("--thinking", thinking);
 	if (agent.tools && agent.tools.length > 0) args.push("--tools", agent.tools.join(","));
-	const VALID_THINKING = ["off", "minimal", "low", "medium", "high", "xhigh", "max"];
-	const effectiveThinking = agent.thinking ?? (inheritsDispatch ? dispatchDefaults?.thinkingLevel : undefined);
-	if (effectiveThinking && VALID_THINKING.includes(effectiveThinking)) {
-		args.push("--thinking", effectiveThinking);
-	}
 
 	let tmpPromptDir: string | null = null;
 	let tmpPromptPath: string | null = null;
@@ -345,7 +315,7 @@ async function runSingleAgent(
 		messages: [],
 		stderr: "",
 		usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0, contextTokens: 0, turns: 0 },
-		model: agent.model,
+		model,
 		step,
 	};
 
@@ -409,6 +379,10 @@ async function runSingleAgent(
 					emitUpdate();
 				}
 
+				if (event.type === "tool_result_end" && event.message) {
+					currentResult.messages.push(event.message as Message);
+					emitUpdate();
+				}
 			};
 
 			proc.stdout.on("data", (data) => {
@@ -419,37 +393,24 @@ async function runSingleAgent(
 			});
 
 			proc.stderr.on("data", (data) => {
-				if (currentResult.stderr.length >= STDERR_CAP) return;
 				currentResult.stderr += data.toString();
-				if (currentResult.stderr.length > STDERR_CAP) {
-					currentResult.stderr = currentResult.stderr.slice(0, STDERR_CAP) + "\n[stderr truncated]";
-				}
 			});
 
 			proc.on("close", (code) => {
 				if (buffer.trim()) processLine(buffer);
-				// code is null when the child died from a signal (OOM, kill):
-				// that is a failure, not success with empty output.
-				resolve(code ?? 1);
+				resolve(code ?? 0);
 			});
 
-			proc.on("error", (err: Error) => {
-				currentResult.stderr = err.message;
-				currentResult.errorMessage = `Subagent spawn failed: ${err.message}`;
+			proc.on("error", () => {
 				resolve(1);
 			});
 
 			if (signal) {
-				let exited = false;
-				proc.on("close", () => {
-					exited = true;
-				});
 				const killProc = () => {
 					wasAborted = true;
 					proc.kill("SIGTERM");
 					setTimeout(() => {
-						// proc.killed is true immediately after SIGTERM; track real exit instead.
-						if (!exited) proc.kill("SIGKILL");
+						if (!proc.killed) proc.kill("SIGKILL");
 					}, 5000);
 				};
 				if (signal.aborted) killProc();
@@ -480,14 +441,12 @@ const TaskItem = Type.Object({
 	agent: Type.String({ description: "Name of the agent to invoke" }),
 	task: Type.String({ description: "Task to delegate to the agent" }),
 	cwd: Type.Optional(Type.String({ description: "Working directory for the agent process" })),
-	model: Type.Optional(Type.String({ description: "Override the agent's default model for this invocation" })),
 });
 
 const ChainItem = Type.Object({
 	agent: Type.String({ description: "Name of the agent to invoke" }),
 	task: Type.String({ description: "Task with optional {previous} placeholder for prior output" }),
 	cwd: Type.Optional(Type.String({ description: "Working directory for the agent process" })),
-	model: Type.Optional(Type.String({ description: "Override the agent's default model for this invocation" })),
 });
 
 const AgentScopeSchema = StringEnum(["user", "project", "both"] as const, {
@@ -505,24 +464,23 @@ const SubagentParams = Type.Object({
 		Type.Boolean({ description: "Prompt before running project-local agents. Default: true.", default: true }),
 	),
 	cwd: Type.Optional(Type.String({ description: "Working directory for the agent process (single mode)" })),
-	model: Type.Optional(Type.String({ description: "Override the agent's default model for this invocation" })),
 });
 
 export default function (pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "subagent",
 		label: "Subagent",
-		description:
-			"REQUIRED for research, code review, planning, parallel tasks — do not do these yourself.\n" +
-			"Spawns isolated agent(s) with their own context window; keeps main context lean.\n" +
-			"Agents: scout (recon), research (web/docs), reviewer (review), planner (plans), worker (execute).\n" +
-			"Modes (exactly one): single {agent, task} · parallel {tasks: [...]} · chain [{agent, task}] with {previous} placeholder.\n" +
-			'Scope: user agents by default; agentScope "both"/"project" enables project-local agents (confirmed first).',
+		description: [
+			"Delegate tasks to specialized subagents with isolated context.",
+			"Modes: single (agent + task), parallel (tasks array), chain (sequential with {previous} placeholder).",
+			`Default agent scope is "user" (from ${path.join(getAgentDir(), "agents")}).`,
+			`To enable project-local agents in ${CONFIG_DIR_NAME}/agents, set agentScope: "both" (or "project").`,
+		].join(" "),
 		parameters: SubagentParams,
 
 		async execute(_toolCallId, params, signal, onUpdate, ctx) {
 			const agentScope: AgentScope = params.agentScope ?? "user";
-			const dispatchDefaults = {
+			const dispatchDefaults: DispatchDefaults = {
 				model: ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined,
 				thinkingLevel: ctx.thinkingLevel,
 			};
@@ -612,6 +570,7 @@ export default function (pi: ExtensionAPI) {
 
 					const result = await runSingleAgent(
 						ctx.cwd,
+						dispatchDefaults,
 						agents,
 						step.agent,
 						taskWithContext,
@@ -620,8 +579,6 @@ export default function (pi: ExtensionAPI) {
 						signal,
 						chainUpdate,
 						makeDetails("chain"),
-						step.model,
-						dispatchDefaults,
 					);
 					results.push(result);
 
@@ -687,13 +644,13 @@ export default function (pi: ExtensionAPI) {
 					try {
 						const result = await runSingleAgent(
 							ctx.cwd,
+							dispatchDefaults,
 							agents,
 							t.agent,
 							t.task,
 							t.cwd,
 							undefined,
 							signal,
-							// Per-task update callback
 							(partial) => {
 								if (partial.details?.results[0]) {
 									allResults[index] = partial.details.results[0];
@@ -702,14 +659,12 @@ export default function (pi: ExtensionAPI) {
 							},
 							makeDetails("parallel"),
 							t.model,
-							dispatchDefaults,
 						);
 						allResults[index] = result;
 						emitParallelUpdate();
 						return result;
 					} catch (err) {
-						// runSingleAgent throws on abort; one task must not discard what
-						// the others already produced.
+						// runSingleAgent throws on abort; keep the other tasks' results.
 						const failed: SingleResult = {
 							agent: t.agent,
 							agentSource: "unknown",
@@ -747,6 +702,7 @@ export default function (pi: ExtensionAPI) {
 			if (params.agent && params.task) {
 				const result = await runSingleAgent(
 					ctx.cwd,
+					dispatchDefaults,
 					agents,
 					params.agent,
 					params.task,
@@ -755,8 +711,6 @@ export default function (pi: ExtensionAPI) {
 					signal,
 					onUpdate,
 					makeDetails("single"),
-					params.model,
-					dispatchDefaults,
 				);
 				const isError = isFailedResult(result);
 				if (isError) {
@@ -833,26 +787,6 @@ export default function (pi: ExtensionAPI) {
 
 			const mdTheme = getMarkdownTheme();
 
-			const toolCallLine = (name: string, args: Record<string, unknown>) =>
-				theme.fg("muted", "→ ") + formatToolCall(name, args, theme.fg.bind(theme));
-
-			// Shared tail for expanded views: tool calls, markdown output, usage line.
-			const appendOutput = (container: Container, r: SingleResult) => {
-				for (const item of getDisplayItems(r.messages)) {
-					if (item.type === "toolCall") container.addChild(new Text(toolCallLine(item.name, item.args), 0, 0));
-				}
-				const finalOutput = getFinalOutput(r.messages);
-				if (finalOutput) {
-					container.addChild(new Spacer(1));
-					container.addChild(new Markdown(finalOutput.trim(), 0, 0, mdTheme));
-				}
-				const usageStr = formatUsageStats(r.usage, r.model);
-				if (usageStr) {
-					container.addChild(new Spacer(1));
-					container.addChild(new Text(theme.fg("dim", usageStr), 0, 0));
-				}
-			};
-
 			const renderDisplayItems = (items: DisplayItem[], limit?: number) => {
 				const toShow = limit ? items.slice(-limit) : items;
 				const skipped = limit && items.length > limit ? items.length - limit : 0;
@@ -891,7 +825,25 @@ export default function (pi: ExtensionAPI) {
 					if (displayItems.length === 0 && !finalOutput) {
 						container.addChild(new Text(theme.fg("muted", "(no output)"), 0, 0));
 					} else {
-						appendOutput(container, r);
+						for (const item of displayItems) {
+							if (item.type === "toolCall")
+								container.addChild(
+									new Text(
+										theme.fg("muted", "→ ") + formatToolCall(item.name, item.args, theme.fg.bind(theme)),
+										0,
+										0,
+									),
+								);
+						}
+						if (finalOutput) {
+							container.addChild(new Spacer(1));
+							container.addChild(new Markdown(finalOutput.trim(), 0, 0, mdTheme));
+						}
+					}
+					const usageStr = formatUsageStats(r.usage, r.model);
+					if (usageStr) {
+						container.addChild(new Spacer(1));
+						container.addChild(new Text(theme.fg("dim", usageStr), 0, 0));
 					}
 					return container;
 				}
@@ -941,6 +893,8 @@ export default function (pi: ExtensionAPI) {
 
 					for (const r of details.results) {
 						const rIcon = r.exitCode === 0 ? theme.fg("success", "✓") : theme.fg("error", "✗");
+						const displayItems = getDisplayItems(r.messages);
+						const finalOutput = getFinalOutput(r.messages);
 
 						container.addChild(new Spacer(1));
 						container.addChild(
@@ -952,7 +906,27 @@ export default function (pi: ExtensionAPI) {
 						);
 						container.addChild(new Text(theme.fg("muted", "Task: ") + theme.fg("dim", r.task), 0, 0));
 
-						appendOutput(container, r);
+						// Show tool calls
+						for (const item of displayItems) {
+							if (item.type === "toolCall") {
+								container.addChild(
+									new Text(
+										theme.fg("muted", "→ ") + formatToolCall(item.name, item.args, theme.fg.bind(theme)),
+										0,
+										0,
+									),
+								);
+							}
+						}
+
+						// Show final output as markdown
+						if (finalOutput) {
+							container.addChild(new Spacer(1));
+							container.addChild(new Markdown(finalOutput.trim(), 0, 0, mdTheme));
+						}
+
+						const stepUsage = formatUsageStats(r.usage, r.model);
+						if (stepUsage) container.addChild(new Text(theme.fg("dim", stepUsage), 0, 0));
 					}
 
 					const usageStr = formatUsageStats(aggregateUsage(details.results));
@@ -1008,6 +982,8 @@ export default function (pi: ExtensionAPI) {
 
 					for (const r of details.results) {
 						const rIcon = isFailedResult(r) ? theme.fg("error", "✗") : theme.fg("success", "✓");
+						const displayItems = getDisplayItems(r.messages);
+						const finalOutput = getFinalOutput(r.messages);
 
 						container.addChild(new Spacer(1));
 						container.addChild(
@@ -1015,7 +991,27 @@ export default function (pi: ExtensionAPI) {
 						);
 						container.addChild(new Text(theme.fg("muted", "Task: ") + theme.fg("dim", r.task), 0, 0));
 
-						appendOutput(container, r);
+						// Show tool calls
+						for (const item of displayItems) {
+							if (item.type === "toolCall") {
+								container.addChild(
+									new Text(
+										theme.fg("muted", "→ ") + formatToolCall(item.name, item.args, theme.fg.bind(theme)),
+										0,
+										0,
+									),
+								);
+							}
+						}
+
+						// Show final output as markdown
+						if (finalOutput) {
+							container.addChild(new Spacer(1));
+							container.addChild(new Markdown(finalOutput.trim(), 0, 0, mdTheme));
+						}
+
+						const taskUsage = formatUsageStats(r.usage, r.model);
+						if (taskUsage) container.addChild(new Text(theme.fg("dim", taskUsage), 0, 0));
 					}
 
 					const usageStr = formatUsageStats(aggregateUsage(details.results));
@@ -1053,6 +1049,4 @@ export default function (pi: ExtensionAPI) {
 			return new Text(text?.type === "text" ? text.text : "(no output)", 0, 0);
 		},
 	});
-
-	// Subagent usage rules are injected via AGENTS.md — no prompt injection here.
 }

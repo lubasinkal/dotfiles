@@ -1,15 +1,13 @@
-# Agent Rules — pi harness contract
+# Agent rules
 
-- Keep work within the requested scope. If requirements or context are insufficient, state what is unclear; don't guess.
-- Preserve safety: no destructive commands, installs, commits, pushes, branches, tags, or PRs unless explicitly requested.
-- Use available tools appropriately. Don't use shell commands to search; use repository tools instead.
-- Verify changes with an appropriate check and report the actual result. Review the diff before handoff.
-- Be direct; cite file locations when useful.
+- Stay inside the requested scope. If the request or context is unclear, say what is missing instead of guessing.
+- No destructive commands, installs, commits, pushes, branches, tags, or PRs unless asked.
+- Search with the repository tools (`snippet`, `fd`, `code-index`), not shell pipelines.
+- Verify with the appropriate check and report the real result. Review the diff before handing off.
+- Be direct. Cite `file:line`.
 
 ## Subagents
-- `scout`: codebase reconnaissance; report findings.
-- `planner`: produce a plan; make no edits.
-- `worker`: execute the plan without redesign or scope changes.
-- `research`: report sourced external facts.
-- `reviewer`: read-only review; report risks and issues.
-- If a plan is ambiguous or incomplete, stop and report the blocker.
+
+`scout` recon · `planner` plan only · `worker` execute the plan · `reviewer` read-only review · `research` sourced external facts.
+
+If a plan is ambiguous or incomplete, stop and report the blocker.

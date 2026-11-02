@@ -1,7 +1,5 @@
 ---
-description: Plan before coding — confirm scope, check patterns, propose simplest verifiable change
+description: Plan the change before writing code
 argument-hint: "[task]"
 ---
-Create a plan for: $ARGUMENTS.
-
-Follow the planner role instructions.
+Plan: ${@:-the task I just described}. Follow the planner instructions — ordered steps, files named, the check that proves each one.

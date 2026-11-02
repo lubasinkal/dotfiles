@@ -1,94 +1,83 @@
-# Pi agent config
+# pi agent config
 
-Source-of-truth for the local pi-coding-agent install. Mirrored to `~/.pi/`
-via a manual symlink (`~/.pi → ~/dotfiles/pi/.pi`), not stow.
+Source of truth for the local pi-coding-agent setup. Live at `~/.pi/`, a symlink
+to this directory (`~/dotfiles/pi/.pi`) — edit here, `stow pi` is skipped.
 
-## Deploy convention
+## Layout
 
-- **Repo:** `~/dotfiles/pi/.pi/` (this dir)
-- **Live:** `~/.pi/` (symlink to the above)
-- All edits to `~/.pi/...` are physical edits here. Edit dotfiles directly.
-- `stow pi` is intentionally skipped — the whole-dir symlink replaces per-file symlinks.
-- `dotfiles/pi/.gitignore` excludes personal/session state from the public repo (auth, sessions, memory DBs, npm deps).
+| Path | What |
+|---|---|
+| `agent/AGENTS.md` | Harness rules: scope, safety, tool discipline, verification, subagent roster |
+| `agent/agents/` | Subagent system prompts: `scout`, `planner`, `worker`, `reviewer`, `research` |
+| `agent/prompts/` | Slash commands: `check`, `clean`, `commit`, `implement`, `plan`, `review`, `verify` |
+| `agent/extensions/` | User extensions (below) |
+| `agent/lib/` | Tool implementations that `token-tools/` registers |
+| `agent/bin/` | Bundled `fd`, `rg`, and the `pi` launcher |
 
-## Prompt build order
+Prompt build order: base → `AGENTS.md` → tool snippets → guidelines → skills
+(on demand) → `before_agent_start` hooks.
 
-`base` → `AGENTS.md` (workflow/process) → `tool snippets` → `guidelines`
-→ `skills` (on-demand) → `before_agent_start` (extensions).
-
-- `AGENTS.md` — harness contract (883 B): scope/safety rules, tool discipline, verification, subagent roster.
-- `prompts/` — slash-command templates (check, clean, commit, implement, plan, review, verify).
-- `agents/` — subagent system prompts (scout, research, reviewer, planner, worker).
-- `skills/` — Agent Skills packs (on-demand). **Not created yet** — no `skills/` dir exists.
-- `memory/` — gitignored, intended long-term memory dir. **Not active yet** — `pi-hermes-memory` was removed and no replacement memory extension is installed.
-
-## Extensions (all user-written)
+## Extensions
 
 | Dir | Purpose | Tools |
 |---|---|---|
-| `ask-user/` | TUI multi-choice picker | `ask_user` |
-| `bg/` | Detached background shell tasks with on-disk registry (shared with subagents) | `bg` |
-| `cmd-opt/` | Bash lint/optimize/cap/block/rewrite engine | `lint-cmd`, `cmd-stats` |
-| `file-search/` | Wraps `fd` with formatting/truncation (content search lives in `snippet`) | `fd` |
-| `git-guard/` | Blocks `git commit` when secrets, `.env`/key files, `.only` or `debugger` are staged | (event hook) |
-| `quality-gate/` | Post-op git diff scan (`.only`, `debugger`, `@ts-ignore`, `console.log`) | (event hook) |
-| `read-cap/` | Caps `read` output to 250 lines | (event hook) |
-| `subagent/` | Spawns separate `pi` processes; single/parallel/chain modes | `subagent` |
-| `tasktracker/` | Task list with priorities, notes, branch-aware state, optional cross-session `tasks.json` | `task`, `/tasks` || `token-tools/` | Registers efficient primitives defined in `lib/` | `snippet`, `diff-hunks`, `code-index`, `files-changed`, `check` |
-| `ui/` | Footer (dir/branch, tokens, ctx%, cost, model) + a work widget above the editor (tasks, running jobs) | (event hook) |
-| `atuin.ts` | Records pi's bash commands to Atuin history (no-op when atuin isn't installed) | (event hook) |
+| `ask-user/` | TUI multiple-choice picker | `ask_user` |
+| `bg/` | Detached background shell tasks; registry on disk so subagents see them | `bg` |
+| `cmd-opt/` | Lints, rewrites, blocks and caps bash commands | `lint-cmd`, `cmd-stats` |
+| `file-search/` | `fd` with truncation and a temp file for full output | `fd` |
+| `git-guard/` | Blocks `git commit` when secrets, `.env`/key files, `.only` or `debugger` are staged | (hook) |
+| `quality-gate/` | After a successful edit, warns about `.only`, `debugger`, `@ts-ignore`, `console.log` in added lines | (hook) |
+| `read-cap/` | Caps `read` at 250 lines with a truncation notice | (hook) |
+| `subagent/` | pi's shipped example extension, plus per-agent `thinking` and two fixes (below) | `subagent` |
+| `tasktracker/` | Task list with priorities, notes, branch-aware state, optional `tasks.json` | `task`, `/tasks` |
+| `token-tools/` | Registers the `lib/` tools | `snippet`, `diff-hunks`, `code-index`, `files-changed`, `check` |
+| `ui/` | Footer (dir, branch, tokens, cost, model) plus a work widget above the editor | (hook) |
 
-Web search/fetch comes from the npm package `pi-web-access` (below), not a local extension.
+`subagent` is pi's example kept close to upstream, with three deliberate
+differences: agents may set their own `thinking:` level, a child killed by a
+signal counts as a failure, and one aborted parallel task no longer discards
+the others' results. Re-sync it when pi ships a new example.
 
-## npm packages (`npm/`)
+## UI
 
-One package is active:
+Above the editor, one line, only while there is something to say:
 
-- `pi-web-access` — web fetch/search. Settings entry: `npm:pi-web-access`; dependency pinned in `npm/package.json`.
+```
+ 1/3 tasks · next: fix bug · ctx 42% · 84k/200k · 1 running · npm run build
+```
 
-Removed (unused): `pi-hermes-memory`, `@ollama/pi-web-search`, `context-mode`, `pi-subagents`.
+Below it, always:
 
-## Secrets
+```
+~/dotfiles (master) · ↑1.2k ↓340 · $0.42        opencode-go/mimo-v2.6-flash · ✻ high
+```
 
-Two mechanisms, kept separate:
-
-- **`~/.pi/agent/auth.json`** + **`trust.json`** — pi's auth + project trust decisions. Gitignored.
-- **`~/.config/opencode/secrets.sh`** — opencode env vars (`{env:VAR}` substitution in `opencode/opencode.json`). Auto-sourced by `.zshrc`.
+Task counts come from the branch; running jobs from `~/.pi/agent/bg/` (2 s
+cache). Segments drop from the right as the terminal narrows.
 
 ## Tests
 
-Run any of these with plain `node` (22+, type stripping) or `bun`:
+`node test-*.ts` (Node 22 strips types) or `bun run test-*.ts`, from
+`agent/`. `install.sh` links `agent/node_modules` to the current pi release, which
+the imports need.
 
-- `test-cmd-opt.ts` — cmd-opt lint/rewrite/cap checks.
-- `test-tasktracker.ts` — task add/list/sort/edit/errors, branch reconstruction, tasks.json persistence, the `/tasks` panel (live state, `r` refresh, close), and that mutations never rewrite session history.
-- `test-bg.ts` — background start/wait/output/stop/clean, exit codes, quoting, process-group kill, pid-reuse safety, on-disk status.
-- `test-git-guard.ts` — commit detection, secret/`.env`/debug blocking, `-a` handling, bypass, fail-open outside a repo.
-- `test-statusline.ts` — footer content and width fitting, the work widget (task progress, next task by priority, running jobs, idle = no lines).
-- `test-lib.ts` — `lib/` tools: diff-hunks path quoting against a hostile filename, `check` parsing stylish eslint and tsc output.
-- `test-quality-gate.ts` — added-line-only detection, failed edits don't arm the gate, session cwd honoured.
-- `test-subagent.ts` — agent discovery: `tools: read, bash` and `tools: [read, bash]`, malformed agents can't break the rest.
-- `test-hooks.ts` — shared bootstrap; teaches node jiti's `./x.js` → `./x.ts` resolution.
-
-All of them need `node_modules/` in this directory. `install.sh` symlinks it to
-`install/releases/<current-version>/node_modules`; without it the
-`@earendil-works/*` imports don't resolve.
+| File | Covers |
+|---|---|
+| `test-cmd-opt.ts` | lint, rewrites (one at a time), output capping |
+| `test-tasktracker.ts` | task actions, branch reconstruction, `/tasks` panel, history immutability |
+| `test-bg.ts` | exit codes, quoting, process-group kill, pid reuse, durability |
+| `test-git-guard.ts` | commit detection, secret/debug blocking, `-a`, commit target repo, bypass |
+| `test-quality-gate.ts` | added-line-only, failed edits don't arm it, session cwd |
+| `test-statusline.ts` | footer and widget content, width fitting, idle state, live jobs |
+| `test-subagent.ts` | agent discovery: both `tools:` spellings, malformed files |
+| `test-lib.ts` | `diff-hunks` path quoting, `check` parsing tsc/eslint, `code-index` |
+| `test-hooks.ts` | shared bootstrap for jiti's `./x.js` → `./x.ts` |
 
 ## Caveats
 
-- **`quality-gate/`** has hardcoded patterns (no config file). Edit `extensions/quality-gate/index.ts` to customize.
-- **`git-guard/`** also hardcodes its patterns (secrets, `.env`/key files, `.only`, `debugger`). Bypass a session with `PI_GIT_GUARD=off`. It blocks only `git commit` through the bash tool — commits you make in another terminal are not covered.
-- **Tool schemas import `Type` from `typebox`**, not from `@earendil-works/pi-ai`. Pi 1.5.0's published `pi-ai` no longer re-exports `Type` (inside pi it still does), and importing from `typebox` keeps extensions loadable outside pi, which is what the test harness needs. `StringEnum` still comes from `pi-ai`.
-- **`lib/`** implements tools that `extensions/token-tools/` registers (plus `piEnv()`, shared by `file-search/`). Split is intentional (impl vs. registration) but undocumented in code.
-- **No `AGENTS.override.md`** anywhere — if a child repo needs to shadow inherited rules, add one at the repo root.
-- **No memory or skills installed yet** — `memory/` and `skills/` are the intended homes (both gitignored/absent). New-machine clones start without them.
-- **`tasks.json`** is written only when a task call sets `persist: true`; it is not in `.gitignore` (it lives outside the repo, under `~/.pi/agent/`).
-- **`bg` tasks outlive the session by design** — detached process groups keep running after pi exits. Stop servers/watchers explicitly (`bg stop`), and `bg clean` drops finished entries. Logs/meta live in `~/.pi/agent/bg/`.
-- **UI split**: the footer below the editor shows identity and resources only (dir, branch, tokens, cost, model, plus any `setStatus` text from other extensions). Tasks, running `bg` jobs and context usage share a single horizontal line above the editor (`1/3 tasks · next: fix bug · ctx 42% · 84k/200k · 1 running · npm run build`). Segments drop from the right as the terminal narrows, and the line disappears when nothing is known. pi stacks widgets vertically — one line per widget key — so anything on this line is composed by the status-line extension.
-- **No context-pruner**: it was removed after measuring. On a 1M-token model its 85% trigger needed ~891k tokens of transcript (the largest recorded session used 141k), so it never pruned for real while costing ~11 ms per request; pi's built-in compaction covers the case. Re-add from git history if you start running small-window models. Task counts come from the branch; running jobs from `~/.pi/agent/bg/`, refreshed at most every 2s.
-- **`node_modules/` (typecheck deps) is a gitignored symlink** — recreate it before `tsc --noEmit` works on a fresh clone.
-
-## Bundled binaries
-
-`agent/bin/` ships static `fd`, `rg`, and the `pi` launcher. pi's bash tool
-prepends this dir to PATH automatically; extension code that spawns processes
-must pass `piEnv()` from `lib/shared.ts` (the pi process PATH lacks it).
+- **Nothing is version-pinned** to pi internals beyond what the extensions import; a pi upgrade can move the extension surface.
+- **`git-guard` and `quality-gate` hardcode their patterns.** `PI_GIT_GUARD=off` disables the former for a session.
+- **`bg` tasks outlive pi by design** — detached process groups. Stop servers with `bg stop`; `bg clean` drops finished entries.
+- **No memory or skills installed.** `memory/` and `skills/` are the intended homes, both gitignored.
+- **`atuin` was removed** — it recorded nothing without the binary installed.
+- **`context-pruner` was removed** after measuring: at a 1M-token window its 85% trigger needed ~891k tokens of transcript. It did prune 305 KB at 128k, so recover it from history if you start running small-window models.
