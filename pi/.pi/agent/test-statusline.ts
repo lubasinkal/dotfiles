@@ -46,6 +46,8 @@ mkdirSync(bgDir, { recursive: true });
 writeFileSync(join(bgDir, "run1.json"), JSON.stringify({ id: "run1", command: "npm run build", startedAt: 1000, pid: 1, exitPath: join(bgDir, "run1.exit") }));
 writeFileSync(join(bgDir, "done1.json"), JSON.stringify({ id: "done1", command: "npm test", startedAt: 2000, pid: 2, exitPath: join(bgDir, "done1.exit") }));
 writeFileSync(join(bgDir, "done1.exit"), "0");
+// A killed task: no exit file, and the pid is gone. Must not read as running.
+writeFileSync(join(bgDir, "killed1.json"), JSON.stringify({ id: "killed1", command: "crashed build", startedAt: 500, pid: 999_999, exitPath: join(bgDir, "killed1.exit") }));
 
 let footer: any;
 let widget: any;
@@ -91,6 +93,8 @@ ok("widget shows task progress", widgetText.includes("1/3 tasks"), widgetText);
 ok("widget names the next task by priority", widgetText.includes("next: fix bug"), widgetText);
 ok("widget counts running bg jobs", widgetText.includes("1 running"), widgetText);
 ok("widget names the oldest bg job", widgetText.includes("npm run build"), widgetText);
+ok("widget ignores a killed job", !widgetText.includes("crashed build"), widgetText);
+ok("widget counts only live jobs", /1 running/.test(widgetText) && !/2 running/.test(widgetText), widgetText);
 ok("widget shows context usage", widgetText.includes("ctx 42%"), widgetText);
 ok("widget shows context window detail", /ctx 42% · 2k\/200k/.test(widgetText), widgetText);
 ok("widget segments are separated", widgetText.split(" · ").length >= 3, widgetText);

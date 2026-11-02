@@ -348,6 +348,13 @@ export default function bg(pi: ExtensionAPI) {
 					const deadline = Date.now() + STOP_GRACE_MS;
 					while (isAlive(meta.pid) && Date.now() < deadline) await sleep(WAIT_POLL_MS);
 					if (isAlive(meta.pid)) killGroup(meta.pid, "SIGKILL");
+					// The wrapper dies before it can write its own exit code, so record one
+					// here; otherwise the task reads as "lost" forever.
+					try {
+						writeFileSync(meta.exitPath, isAlive(meta.pid) ? "137" : "143", "utf8");
+					} catch {
+						// best effort — status will fall back to liveness
+					}
 					return result(`Stopped ${meta.id} (${truncate(meta.command, 70)})`, { action: "stop", taskId: meta.id, state: "exited" });
 				}
 

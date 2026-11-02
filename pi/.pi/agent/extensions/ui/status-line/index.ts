@@ -29,6 +29,16 @@ const cache = {
 /** Running background tasks (from bg's on-disk registry), refreshed on a TTL. */
 let bgCache = { at: 0, running: 0, label: undefined as string | undefined };
 
+function isProcessAlive(pid: number | undefined): boolean {
+	if (typeof pid !== "number" || pid <= 0) return false;
+	try {
+		process.kill(pid, 0);
+		return true;
+	} catch (err) {
+		return (err as NodeJS.ErrnoException).code === "EPERM";
+	}
+}
+
 function bgInfo(now: number): { running: number; label?: string } {
 	if (now - bgCache.at < 2000) return bgCache;
 	let running = 0;
@@ -42,10 +52,14 @@ function bgInfo(now: number): { running: number; label?: string } {
 			if (fs.existsSync(path.join(dir, `${id}.exit`))) continue;
 			const meta = JSON.parse(fs.readFileSync(path.join(dir, file), "utf8")) as {
 				id?: string;
+				pid?: number;
 				startedAt?: number;
 				command?: string;
 			};
 			if (!meta?.id) continue;
+			// No exit file only means "still running" while the process is alive;
+			// a killed one must not be counted as running.
+			if (!isProcessAlive(meta.pid)) continue;
 			running++;
 			if (typeof meta.startedAt === "number" && meta.command && (!oldest || meta.startedAt < oldest.startedAt)) {
 				oldest = { startedAt: meta.startedAt, command: meta.command };

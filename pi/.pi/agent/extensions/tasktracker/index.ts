@@ -20,7 +20,7 @@ import { StringEnum } from "@earendil-works/pi-ai";
 import { Type } from "typebox";
 import type { ExtensionAPI, ExtensionContext, Theme } from "@earendil-works/pi-coding-agent";
 import { matchesKey, Text, truncateToWidth } from "@earendil-works/pi-tui";
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -74,7 +74,9 @@ function loadPersisted(): { tasks: Task[]; nextId: number } | null {
 function savePersisted(tasks: Task[], nextId: number): boolean {
 	try {
 		mkdirSync(dirname(TASK_FILE), { recursive: true });
-		writeFileSync(TASK_FILE, JSON.stringify({ tasks, nextId }, null, "\t") + "\n", "utf8");
+		const tmp = `${TASK_FILE}.tmp`;
+		writeFileSync(tmp, JSON.stringify({ tasks, nextId }, null, "\t") + "\n", "utf8");
+		renameSync(tmp, TASK_FILE);
 		return true;
 	} catch {
 		return false;
@@ -113,17 +115,23 @@ function counts(tasks: Task[]): string {
 	return `${done}/${tasks.length} done`;
 }
 
+/**
+ * Snapshot for a tool result. Deep-copies the tasks: these objects end up in the
+ * session history, and a later `done`/`edit` must not rewrite them.
+ */
+const snapshot = (tasks: Task[]) => tasks.map((t) => ({ ...t }));
+
 function okText(message: string, tasks: Task[], nextId: number, persisted: boolean) {
 	return {
 		content: [{ type: "text" as const, text: message }],
-		details: { action: "mutate", tasks: [...tasks], nextId, persisted } as TaskDetails,
+		details: { action: "mutate", tasks: snapshot(tasks), nextId, persisted } as TaskDetails,
 	};
 }
 
 function errText(message: string, tasks: Task[], nextId: number, persisted: boolean, action: string) {
 	return {
 		content: [{ type: "text" as const, text: `Error: ${message}` }],
-		details: { action, tasks: [...tasks], nextId, persisted, error: message } as TaskDetails,
+		details: { action, tasks: snapshot(tasks), nextId, persisted, error: message } as TaskDetails,
 	};
 }
 

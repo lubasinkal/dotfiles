@@ -42,6 +42,16 @@ const guard = async (command: string, cwd = repo) => {
 	return undefined;
 };
 
+// ── commit target resolution ──────────────────────────────────────
+const { commitTargets } = mod;
+check("plain commit targets cwd", commitTargets("git commit -m x", "/base"), ["/base"]);
+check("cd then commit targets that dir", commitTargets("cd sub && git commit -m x", "/base"), ["/base/sub"]);
+check("quoted cd target", commitTargets('cd "a b" && git commit -m x', "/base"), ["/base/a b"]);
+check("git -C targets that dir", commitTargets("git -C sub commit -m x", "/base"), ["/base/sub"]);
+check("absolute cd target", commitTargets("cd /tmp/x && git commit", "/base"), ["/tmp/x"]);
+check("two commits, two targets", commitTargets("git commit -m a; cd sub && git commit -m b", "/base"), ["/base", "/base/sub"]);
+check("no commit, no targets", commitTargets("git status", "/base"), []);
+
 // ── commit detection ───────────────────────────────────────────────
 const { isGitCommit, commitsAllFiles } = mod;
 ok("plain commit", isGitCommit("git commit -m 'x'"));
@@ -120,6 +130,34 @@ ok("uncovered by --cached alone", (await guard("git commit -m x"))?.block !== tr
 res = await guard("git commit -am x");
 ok("-a commit scans working tree", res?.block === true && /anthropic-key/.test(res.reason ?? ""), res?.reason);
 gitIn(["checkout", "--", "tracked.txt"]);
+
+// ── the scanned repo is the one being committed to ────────────────
+const other = join(root, "other");
+execFileSync("git", ["init", "-q", other]);
+const gitOther = (args: string[]) =>
+	execFileSync("git", ["-c", "user.email=t@t", "-c", "user.name=t", ...args], { cwd: other, encoding: "utf8" });
+gitOther(["commit", "-q", "--allow-empty", "-m", "init"]);
+
+// Secret staged in the OTHER repo, nothing staged here.
+writeFileSync(join(other, "creds.txt"), "AKIAIOSFODNN7EXAMPLE\n");
+gitOther(["add", "creds.txt"]);
+
+res = await guard(`cd ${other} && git commit -m x`);
+ok("cd into another repo: scans that repo", res?.block === true, JSON.stringify(res));
+
+// Secret staged HERE, commit aimed at the clean other repo: must not block.
+write("mine.txt", "AKIAIOSFODNN7EXAMPLE\n");
+stage("mine.txt");
+gitOther(["restore", "--staged", "creds.txt"]);
+res = await guard(`cd ${other} && git commit -m x`);
+ok("cd into a clean repo: does not block on cwd's index", res?.block !== true, JSON.stringify(res));
+
+// Secret staged in the other repo, reached with git -C.
+gitOther(["add", "creds.txt"]);
+res = await guard(`git -C ${other} commit -m x`);
+ok("git -C scans the target repo", res?.block === true, JSON.stringify(res));
+gitOther(["restore", "--staged", "creds.txt"]);
+gitIn(["restore", "--staged", "mine.txt"]);
 
 // ── bypass and failure modes ───────────────────────────────────────
 write("creds2.txt", "AKIAIOSFODNN7EXAMPLE\n");

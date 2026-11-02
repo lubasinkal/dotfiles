@@ -31,20 +31,36 @@ function parseTsc(out: string): { errors: string[]; rawCount: number } {
 	return { errors, rawCount };
 }
 
+/**
+ * Parse eslint's `stylish` output:
+ *
+ *   /abs/path/a.ts
+ *     3:9  error  Unexpected any  @typescript-eslint/no-explicit-any
+ *
+ * The file name sits on its own line, so it has to be tracked across lines.
+ */
 function parseEslint(out: string): { errors: string[]; rawCount: number } {
 	const seen = new Set<string>();
 	const errors: string[] = [];
 	let rawCount = 0;
-	const re = /^(.+?)\s+(\d+):(\d+)\s+(error|warning)\s+(.+?)\s+(.+)$/;
+	let file = "";
+
 	for (const line of out.split("\n")) {
-		const m = re.exec(line);
-		if (!m) continue;
+		if (!line.trim()) continue;
+		if (!/^\s/.test(line)) {
+			// Unindented: either a path header or the ✖ summary at the end.
+			if (!line.startsWith("✖")) file = line.trim();
+			continue;
+		}
+		const m = /^\s+(\d+):(\d+)\s+(error|warning)\s+(.+?)(?:\s{2,}([\w@/.-]+))?\s*$/.exec(line);
+		if (!m || !file) continue;
 		rawCount++;
-		const key = `${m[1]}:${m[2]}:${m[5]}:${m[6]}`;
+		const key = `${file}:${m[1]}:${m[4]}:${m[5] ?? ""}`;
 		if (seen.has(key)) continue;
 		seen.add(key);
-		errors.push(`${m[1]}:${m[2]}: ${m[4]} ${m[5]} (${m[6]})`);
+		errors.push(`${file}:${m[1]}: ${m[3]} ${m[4]}${m[5] ? ` (${m[5]})` : ""}`);
 	}
+
 	return { errors, rawCount };
 }
 
@@ -92,7 +108,7 @@ export const checkTool = defineTool({
 			if (!bin) parts.push("eslint: not found");
 			else {
 				const t0 = Date.now();
-				const { code, out } = await runAsync(bin, [".", "--format", "compact"], ctx.cwd, 120_000);
+				const { code, out } = await runAsync(bin, [".", "--format", "stylish"], ctx.cwd, 120_000);
 				const { errors, rawCount } = parseEslint(out);
 				const clean = code === 0 && errors.length === 0;
 				const crashed = code !== 0 && errors.length === 0;

@@ -82,6 +82,9 @@ r = await run({ action: "stop", id: id5 });
 ok("stop reports success", !d(r).error, text(r));
 r = await run({ action: "list" });
 ok("stopped task no longer running", !text(r).includes(`${id5}  running`), text(r));
+r = await run({ action: "output", id: id5 });
+ok("stopped task reads as exited, not lost", d(r).state === "exited", JSON.stringify(d(r)));
+ok("stopped task keeps its exit code", d(r).code === 143 || d(r).code === 137, String(d(r).code));
 
 r = await run({ action: "stop", id: id5 });
 ok("stop on finished task errors", /is not running/.test(d(r).error ?? ""), JSON.stringify(d(r)));

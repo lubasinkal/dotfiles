@@ -64,6 +64,7 @@ Run any of these with plain `node` (22+, type stripping) or `bun`:
 - `test-bg.ts` — background start/wait/output/stop/clean, exit codes, quoting, process-group kill, pid-reuse safety, on-disk status.
 - `test-git-guard.ts` — commit detection, secret/`.env`/debug blocking, `-a` handling, bypass, fail-open outside a repo.
 - `test-statusline.ts` — footer content and width fitting, the work widget (task progress, next task by priority, running jobs, idle = no lines).
+- `test-lib.ts` — `lib/` tools: diff-hunks path quoting against a hostile filename, `check` parsing stylish eslint and tsc output.
 - `test-hooks.ts` — shared bootstrap; teaches node jiti's `./x.js` → `./x.ts` resolution.
 
 All of them need `node_modules/` in this directory. `install.sh` symlinks it to

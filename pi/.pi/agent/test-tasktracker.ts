@@ -150,7 +150,16 @@ ok("r requests a render", renders > 0);
 component.handleInput("\u001b");
 ok("escape closes the panel", closed);
 
-// ── 13. task mutations must not rewrite the session history ───────
+// ── 13. a mutation must not rewrite the snapshot it was based on ──
+await reconstruct();
+const afterAdd = await run({ action: "add", text: "snapshot victim" });
+await run({ action: "done", id: afterAdd.details.tasks[0].id });
+ok("later done() does not rewrite the add snapshot", afterAdd.details.tasks[0].done === false, JSON.stringify(afterAdd.details.tasks[0]));
+const edited = await run({ action: "add", text: "before edit" });
+await run({ action: "edit", id: edited.details.tasks[edited.details.tasks.length - 1].id, text: "after edit" });
+ok("later edit() does not rewrite the add snapshot", edited.details.tasks.some((t: any) => t.text === "before edit"), JSON.stringify(edited.details.tasks));
+
+// ── 14. task mutations must not rewrite the session history ───────
 const historyLen = branch[branch.length - 1].message.details.tasks.length;
 await reconstruct(branch as any[]);
 await run({ action: "add", text: "after reconstruct" });

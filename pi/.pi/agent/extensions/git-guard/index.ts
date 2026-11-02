@@ -19,6 +19,7 @@
  */
 
 import { execFileSync } from "node:child_process";
+import * as path from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { piEnv } from "../../lib/shared.js";
 
@@ -58,6 +59,34 @@ export function isGitCommit(command: string): boolean {
 /** `-a` / `--all` makes `git commit` include unstaged changes to tracked files. */
 export function commitsAllFiles(command: string): boolean {
 	return /\bcommit\b[^;&|\n]*(?:--all\b|-[A-Za-z]*a[A-Za-z]*(?:\s|$))/.test(command);
+}
+
+/**
+ * Directories each `git commit` in the command would run in, honouring
+ * `cd <dir> &&` and `git -C <dir>`, so a commit aimed at another repo is
+ * scanned against that repo's index rather than the session's cwd.
+ */
+export function commitTargets(command: string, baseCwd: string): string[] {
+	const targets: string[] = [];
+	let cwd = baseCwd;
+
+	for (const part of command.split(/&&|\|\||[;|\n]/)) {
+		const trimmed = part.trim();
+		if (!trimmed) continue;
+
+		const cd = /^cd\s+(?:"([^"]+)"|'([^']+)'|(\S+))/.exec(trimmed);
+		if (cd) {
+			cwd = path.resolve(cwd, cd[1] ?? cd[2] ?? cd[3] ?? "");
+			continue;
+		}
+
+		if (!/\bgit\b(?:(?:\s+-[Cc]\s*\S+)|(?:\s+--?[A-Za-z-]+=\S+)|(?:\s+--no-[a-z-]+)|(?:\s+-p))*\s+commit\b/.test(trimmed)) continue;
+
+		const cFlag = /\bgit\b[^;&|\n]*?\s-C\s*(?:"([^"]+)"|'([^']+)'|(\S+))/.exec(trimmed);
+		targets.push(cFlag ? path.resolve(cwd, cFlag[1] ?? cFlag[2] ?? cFlag[3] ?? "") : cwd);
+	}
+
+	return targets;
 }
 
 // ── Diff scanning ───────────────────────────────────────────────────────
@@ -163,6 +192,11 @@ export default function gitGuard(pi: ExtensionAPI) {
 		if (event.toolName !== "bash") return;
 		const command = (event.input as { command?: string }).command;
 		if (!command || !isGitCommit(command)) return;
-		return checkCommit(ctx.cwd, command);
+
+		for (const cwd of commitTargets(command, ctx.cwd)) {
+			const result = checkCommit(cwd, command);
+			if (result.block) return result;
+		}
+		return { block: false };
 	});
 }

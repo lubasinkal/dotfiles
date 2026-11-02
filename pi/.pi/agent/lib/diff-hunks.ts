@@ -11,7 +11,7 @@
 
 import { Type } from "typebox";
 import { defineTool, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { DEFAULT_CAP, truncate, run, textResult } from "./shared.js";
+import { DEFAULT_CAP, q, truncate, run, textResult } from "./shared.js";
 
 export const diffHunksTool = defineTool({
 	name: "diff-hunks",
@@ -32,7 +32,7 @@ export const diffHunksTool = defineTool({
 	async execute(_id, params, _sig, _onUpdate, ctx) {
 		const contextLines = Math.max(0, Math.min(10, params.context ?? 3));
 		const diffCmd = params.staged ? "git diff --cached" : "git diff";
-		const pathArgs = (params.paths ?? []).map((p) => `"${p}"`).join(" ");
+		const pathArgs = (params.paths ?? []).length ? `-- ${(params.paths ?? []).map(q).join(" ")}` : "";
 		const cmd = `${diffCmd} -U${contextLines} --no-color ${pathArgs}`.trim();
 		const raw = run(cmd, ctx.cwd, 15_000, 200_000);
 
