@@ -40,3 +40,8 @@
 
 # Typecheck deps (symlinks to global install)
 .pi/agent/node_modules
+
+# Extension runtime state (logs, registry, task list)
+.pi/agent/bg/
+.pi/agent/tasks.json
+.pi/agent/tasks.json.tmp

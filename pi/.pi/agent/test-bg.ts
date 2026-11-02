@@ -18,6 +18,17 @@ let pass = 0, fail = 0;
 function ok(name: string, cond: boolean, extra = "") {
 	if (cond) pass++; else { fail++; console.log(`✗ ${name} ${extra}`); }
 }
+/** Poll until `predicate` holds or `ms` elapses; returns the last value. */
+async function waitUntil<T>(fn: () => T, ok: (value: T) => boolean, ms = 3000): Promise<T> {
+	const deadline = Date.now() + ms;
+	let value = fn();
+	while (!ok(value) && Date.now() < deadline) {
+		await new Promise((res) => setTimeout(res, 100));
+		value = fn();
+	}
+	return value;
+}
+
 function check(name: string, got: any, want: any) {
 	const same = JSON.stringify(got) === JSON.stringify(want);
 	ok(name, same, `got=${JSON.stringify(got)} want=${JSON.stringify(want)}`);
@@ -125,11 +136,10 @@ const { execSync } = await import("node:child_process");
 const countSleeps = () => Number(execSync("ps -eo args= | grep -c '^sleep 313$' || true", { encoding: "utf8" }).trim());
 r = await run({ action: "start", command: "sleep 313 & sleep 313 & wait" });
 const idTree = d(r).taskId;
-await new Promise((res) => setTimeout(res, 600));
-const treeBefore = countSleeps();
+const treeBefore = await waitUntil(countSleeps, (n) => n === 2);
 await run({ action: "stop", id: idTree });
-await new Promise((res) => setTimeout(res, 400));
-ok("stop killed grandchildren", treeBefore === 2 && countSleeps() === 0, `before=${treeBefore} after=${countSleeps()}`);
+const treeAfter = await waitUntil(countSleeps, (n) => n === 0);
+ok("stop killed grandchildren", treeBefore === 2 && treeAfter === 0, `before=${treeBefore} after=${treeAfter}`);
 
 // ── 11. a reused pid is not this task ─────────────────────────────
 const { writeFileSync: writeMetaFile } = await import("node:fs");
