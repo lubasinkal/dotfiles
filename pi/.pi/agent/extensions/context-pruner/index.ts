@@ -298,15 +298,11 @@ export default function (pi: ExtensionAPI) {
 		}
 		prevCumulative = prunedTotal;
 
-		// Above the editor, next to the status line's work widget; the footer stays
-		// free of context bookkeeping. Only touch it when the value moves.
+		// Reported to the status-line widget so context savings share its single
+		// line; the footer stays free of context bookkeeping.
 		if (prunedTotal !== lastStatusPruned) {
 			lastStatusPruned = prunedTotal;
-			ctx.ui.setWidget(
-				"context-pruned",
-				prunedTotal > 0 ? [`✂ ${formatBytes(prunedTotal)} pruned`] : undefined,
-				{ placement: "aboveEditor" },
-			);
+			pi.events.emit("context:pruned", prunedTotal);
 		}
 
 		// Return modified messages (required for changes to take effect)

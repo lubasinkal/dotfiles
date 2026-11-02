@@ -26,6 +26,9 @@ const cache = {
 	tasks: undefined as { done: number; total: number; next?: string } | undefined,
 };
 
+/** Bytes the context-pruner reported it removed (via pi.events). */
+let prunedBytes = 0;
+
 /** Running background tasks (from bg's on-disk registry), refreshed on a TTL. */
 let bgCache = { at: 0, running: 0, label: undefined as string | undefined };
 
@@ -121,43 +124,59 @@ function shortenCwd(cwd: string): string {
 }
 
 export default function (pi: ExtensionAPI) {
+	// context-pruner reports its savings here so everything shares one line.
+	pi.events.on("context:pruned", (bytes) => {
+		const n = Number(bytes);
+		prunedBytes = Number.isFinite(n) && n > 0 ? n : 0;
+	});
+
 	pi.on("session_start", async (_event, ctx) => {
 		const theme = ctx.ui.theme;
 
-		// Work in flight: tasks and background jobs, above the editor so the
-		// footer stays a one-line summary. Renders nothing when idle.
+		// Work in flight + context headroom: one horizontal line above the editor.
+		// pi stacks widgets vertically (one line per widget key), so everything that
+		// belongs on this line is composed here.
 		ctx.ui.setWidget(
 			"work",
 			(_tui, widgetTheme) => ({
 				invalidate() {},
 				render(width: number): string[] {
-					const lines: string[] = [];
-					// Work in flight + context headroom live above the editor.
+					const segs: string[] = [];
 					const { tasks } = branchTotals(ctx.sessionManager.getBranch());
 					if (tasks && tasks.total > 0) {
 						const pending = tasks.total - tasks.done;
-						const label =
+						const next = tasks.next ? ` · next: ${truncateToWidth(tasks.next, 28)}` : "";
+						segs.push(
 							pending > 0
-								? `${tasks.done}/${tasks.total} tasks` + (tasks.next ? ` · next: ${tasks.next}` : "")
-								: `✓ all ${tasks.total} tasks done`;
-						lines.push(widgetTheme.fg(pending > 0 ? "accent" : "success", label));
-					}
-					const bg = bgInfo(Date.now());
-					if (bg.running > 0) {
-						const label = `${bg.running} running` + (bg.label ? ` · ${bg.label}` : "");
-						lines.push(widgetTheme.fg("warning", label));
+								? widgetTheme.fg("accent", `${tasks.done}/${tasks.total} tasks${next}`)
+								: widgetTheme.fg("success", `✓ ${tasks.total} tasks`),
+						);
 					}
 					const usage = ctx.getContextUsage?.();
 					if (usage?.tokens != null && usage?.percent != null && Number.isFinite(usage.percent)) {
 						const pct = Math.round(usage.percent);
 						const color = pct >= 80 ? "error" : pct >= 60 ? "warning" : "dim";
 						const detail =
-							width >= 60 && usage.contextWindow > 0
+							width >= 80 && usage.contextWindow > 0
 								? ` · ${fmtTokens(usage.tokens)}/${fmtTokens(usage.contextWindow)}`
 								: "";
-						lines.push(widgetTheme.fg(color, `ctx ${pct}%${detail}`));
+						segs.push(widgetTheme.fg(color, `ctx ${pct}%${detail}`));
 					}
-					return lines.map((line) => truncateToWidth(` ${line}`, width));
+					const bg = bgInfo(Date.now());
+					if (bg.running > 0) {
+						const label = `${bg.running} running` + (bg.label ? ` · ${truncateToWidth(bg.label, 24)}` : "");
+						segs.push(widgetTheme.fg("warning", label));
+					}
+					if (prunedBytes > 0) segs.push(widgetTheme.fg("dim", `✂ ${fmtTokens(prunedBytes)} of ctx`));
+
+					// Drop the least important segments until the line fits.
+					const sep = widgetTheme.fg("border", " · ");
+					let line = segs.join(sep);
+					while (segs.length > 1 && visibleWidth(line) > width - 1) {
+						segs.pop();
+						line = segs.join(sep);
+					}
+					return segs.length ? [truncateToWidth(` ${line}`, width)] : [];
 				},
 			}),
 			{ placement: "aboveEditor" },

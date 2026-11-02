@@ -9,7 +9,13 @@ const home = mkdtempSync(join(tmpdir(), "pi-status-"));
 process.env.HOME = home;
 
 const handlers: Record<string, ((...a: any[]) => any)[]> = {};
-const pi = { registerTool() {}, registerCommand() {}, on(e: string, h: any) { (handlers[e] ||= []).push(h); } };
+const bus = new Map<string, (data: unknown) => void>();
+const pi = {
+	registerTool() {},
+	registerCommand() {},
+	on(e: string, h: any) { (handlers[e] ||= []).push(h); },
+	events: { on: (ch: string, h: (d: unknown) => void) => { bus.set(ch, h); return () => bus.delete(ch); }, emit: (ch: string, d: unknown) => bus.get(ch)?.(d) },
+};
 
 const mod = await import(join(process.cwd(), "extensions", "ui", "status-line", "index.ts"));
 mod.default(pi);
@@ -80,15 +86,25 @@ ok("footer no longer duplicates bg info", !/running/.test(footerLine), footerLin
 ok("footer drops context percent", !/42%/.test(footerLine), footerLine);
 
 // ── widget: work in flight ────────────────────────────────────────
+bus.get("context:pruned")?.(12_288); // pruner reports via pi.events
 const widgetLines = widget.factory({ requestRender() {} }, theme).render(120);
 const widgetText = widgetLines.join("\n");
+ok("widget is a single line", widgetLines.length === 1, JSON.stringify(widgetLines));
 ok("widget shows task progress", widgetText.includes("1/3 tasks"), widgetText);
 ok("widget names the next task by priority", widgetText.includes("next: fix bug"), widgetText);
 ok("widget counts running bg jobs", widgetText.includes("1 running"), widgetText);
 ok("widget names the oldest bg job", widgetText.includes("npm run build"), widgetText);
 ok("widget shows context usage", widgetText.includes("ctx 42%"), widgetText);
 ok("widget shows context window detail", /ctx 42% · 2k\/200k/.test(widgetText), widgetText);
-ok("widget lines fit the width", widgetLines.every((l: string) => l.length <= 120));
+ok("widget shows pruner savings from the event bus", /✂ 12k of ctx/.test(widgetText), widgetText);
+ok("widget segments are separated", widgetText.split(" · ").length >= 4, widgetText);
+ok("widget line fits the width", widgetLines.every((l: string) => l.length <= 120));
+
+// Narrow: least important segments drop instead of wrapping.
+const narrow = widget.factory({ requestRender() {} }, theme).render(40);
+ok("narrow widget stays one line", narrow.length === 1, JSON.stringify(narrow));
+ok("narrow widget drops the pruner segment", !/✂/.test(narrow[0]), narrow[0]);
+ok("narrow widget fits", narrow[0].length <= 40, narrow[0]);
 
 // ── widget: idle state takes no space ─────────────────────────────
 branch.length = 1;
@@ -99,6 +115,7 @@ await new Promise((r) => setTimeout(r, 2100));
 
 // Context still unknown (e.g. right after compaction) and no work in flight.
 ctx.getContextUsage = () => ({ tokens: null, contextWindow: 200000, percent: null });
+bus.get("context:pruned")?.(0);
 const idle = widget.factory({ requestRender() {} }, theme).render(120);
 ok("widget renders nothing when idle", idle.length === 0, JSON.stringify(idle));
 
