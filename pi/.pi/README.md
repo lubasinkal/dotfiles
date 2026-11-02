@@ -29,7 +29,6 @@ via a manual symlink (`~/.pi → ~/dotfiles/pi/.pi`), not stow.
 | `ask-user/` | TUI multi-choice picker | `ask_user` |
 | `bg/` | Detached background shell tasks with on-disk registry (shared with subagents) | `bg` |
 | `cmd-opt/` | Bash lint/optimize/cap/block/rewrite engine | `lint-cmd`, `cmd-stats` |
-| `context-pruner/` | 3-tier token-budget context collapse | (event hook) |
 | `file-search/` | Wraps `fd` with formatting/truncation (content search lives in `snippet`) | `fd` |
 | `git-guard/` | Blocks `git commit` when secrets, `.env`/key files, `.only` or `debugger` are staged | (event hook) |
 | `quality-gate/` | Post-op git diff scan (`.only`, `debugger`, `@ts-ignore`, `console.log`) | (event hook) |
@@ -81,7 +80,8 @@ All of them need `node_modules/` in this directory. `install.sh` symlinks it to
 - **No memory or skills installed yet** — `memory/` and `skills/` are the intended homes (both gitignored/absent). New-machine clones start without them.
 - **`tasks.json`** is written only when a task call sets `persist: true`; it is not in `.gitignore` (it lives outside the repo, under `~/.pi/agent/`).
 - **`bg` tasks outlive the session by design** — detached process groups keep running after pi exits. Stop servers/watchers explicitly (`bg stop`), and `bg clean` drops finished entries. Logs/meta live in `~/.pi/agent/bg/`.
-- **UI split**: the footer below the editor shows identity and resources only (dir, branch, tokens, cost, model, plus any `setStatus` text from other extensions). Tasks, running `bg` jobs, context usage and the pruner's savings share a single horizontal line above the editor (`1/3 tasks · next: fix bug · ctx 42% · 84k/200k · 1 running · npm run build · ✂ 12k of ctx`). Segments drop from the right as the terminal narrows, and the line disappears when nothing is known. The pruner reports its bytes through `pi.events` (`context:pruned`) because pi stacks widgets vertically — one line per widget key. Task counts come from the branch; running jobs from `~/.pi/agent/bg/`, refreshed at most every 2s.
+- **UI split**: the footer below the editor shows identity and resources only (dir, branch, tokens, cost, model, plus any `setStatus` text from other extensions). Tasks, running `bg` jobs and context usage share a single horizontal line above the editor (`1/3 tasks · next: fix bug · ctx 42% · 84k/200k · 1 running · npm run build`). Segments drop from the right as the terminal narrows, and the line disappears when nothing is known. pi stacks widgets vertically — one line per widget key — so anything on this line is composed by the status-line extension.
+- **No context-pruner**: it was removed after measuring. On a 1M-token model its 85% trigger needed ~891k tokens of transcript (the largest recorded session used 141k), so it never pruned for real while costing ~11 ms per request; pi's built-in compaction covers the case. Re-add from git history if you start running small-window models. Task counts come from the branch; running jobs from `~/.pi/agent/bg/`, refreshed at most every 2s.
 - **`node_modules/` (typecheck deps) is a gitignored symlink** — recreate it before `tsc --noEmit` works on a fresh clone.
 
 ## Bundled binaries

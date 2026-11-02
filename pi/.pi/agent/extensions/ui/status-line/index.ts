@@ -26,9 +26,6 @@ const cache = {
 	tasks: undefined as { done: number; total: number; next?: string } | undefined,
 };
 
-/** Bytes the context-pruner reported it removed (via pi.events). */
-let prunedBytes = 0;
-
 /** Running background tasks (from bg's on-disk registry), refreshed on a TTL. */
 let bgCache = { at: 0, running: 0, label: undefined as string | undefined };
 
@@ -124,12 +121,6 @@ function shortenCwd(cwd: string): string {
 }
 
 export default function (pi: ExtensionAPI) {
-	// context-pruner reports its savings here so everything shares one line.
-	pi.events.on("context:pruned", (bytes) => {
-		const n = Number(bytes);
-		prunedBytes = Number.isFinite(n) && n > 0 ? n : 0;
-	});
-
 	pi.on("session_start", async (_event, ctx) => {
 		const theme = ctx.ui.theme;
 
@@ -167,8 +158,6 @@ export default function (pi: ExtensionAPI) {
 						const label = `${bg.running} running` + (bg.label ? ` · ${truncateToWidth(bg.label, 24)}` : "");
 						segs.push(widgetTheme.fg("warning", label));
 					}
-					if (prunedBytes > 0) segs.push(widgetTheme.fg("dim", `✂ ${fmtTokens(prunedBytes)} of ctx`));
-
 					// Drop the least important segments until the line fits.
 					const sep = widgetTheme.fg("border", " · ");
 					let line = segs.join(sep);
