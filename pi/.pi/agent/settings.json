@@ -1,6 +1,6 @@
 {
   "collapseChangelog": true,
-  "defaultModel": "glm-5.3-flash",
+  "defaultModel": "mimo-v2.6-flash",
   "defaultProvider": "opencode-go",
   "defaultThinkingLevel": "high",
   "enableInstallTelemetry": false,
