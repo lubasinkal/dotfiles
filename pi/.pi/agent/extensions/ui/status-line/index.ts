@@ -1,9 +1,13 @@
 /**
- * Minimal Status Line Extension
+ * Status line + work widget
  *
- * Clean footer inspired by statusline.nvim:
- * Left: directory (branch) | tokens ↑↓ | cost
- * Right: model (✻ thinking)
+ * Footer (below the editor) — identity and resources:
+ *   Left: directory (branch) · tokens ↑↓ [ctx%] · cost
+ *   Right: [statuses ·] model · ✻ thinking
+ *
+ * Widget (above the editor) — only while there is work in flight:
+ *   tasks done/total · next task, then running background jobs
+ *   Renders no lines when idle, so it costs no space.
  */
 
 import os from "node:os";
@@ -19,30 +23,47 @@ const cache = {
 	input: 0,
 	output: 0,
 	cost: 0,
-	tasks: undefined as { done: number; total: number } | undefined,
+	tasks: undefined as { done: number; total: number; next?: string } | undefined,
 };
 
 /** Running background tasks (from bg's on-disk registry), refreshed on a TTL. */
-let bgCache = { at: 0, running: 0 };
+let bgCache = { at: 0, running: 0, label: undefined as string | undefined };
 
-function runningBgTasks(now: number): number {
-	if (now - bgCache.at < 2000) return bgCache.running;
+function bgInfo(now: number): { running: number; label?: string } {
+	if (now - bgCache.at < 2000) return bgCache;
 	let running = 0;
+	let oldest: { startedAt: number; command: string } | undefined;
 	try {
 		const dir = path.join(os.homedir(), ".pi", "agent", "bg");
 		for (const file of fs.readdirSync(dir)) {
 			if (!file.endsWith(".json")) continue;
-			const meta = JSON.parse(fs.readFileSync(path.join(dir, file), "utf8")) as { id?: string };
-			if (!meta?.id) continue;
+			const id = file.slice(0, -5);
 			// Same derivation as bg: an exit-code file means finished.
-			if (fs.existsSync(path.join(dir, `${meta.id}.exit`))) continue;
+			if (fs.existsSync(path.join(dir, `${id}.exit`))) continue;
+			const meta = JSON.parse(fs.readFileSync(path.join(dir, file), "utf8")) as {
+				id?: string;
+				startedAt?: number;
+				command?: string;
+			};
+			if (!meta?.id) continue;
 			running++;
+			if (typeof meta.startedAt === "number" && meta.command && (!oldest || meta.startedAt < oldest.startedAt)) {
+				oldest = { startedAt: meta.startedAt, command: meta.command };
+			}
 		}
 	} catch {
 		running = 0;
 	}
-	bgCache = { at: now, running };
-	return running;
+	bgCache = { at: now, running, label: oldest?.command };
+	return bgCache;
+}
+
+/** First open task, highest priority first (mirrors the task tool's ordering). */
+function nextTask(tasks: readonly { id: number; text: string; done: boolean; priority?: string }[]) {
+	const rank: Record<string, number> = { high: 0, normal: 1, low: 2 };
+	return [...tasks]
+		.filter((t) => !t.done)
+		.sort((a, b) => (rank[a.priority ?? "normal"] ?? 1) - (rank[b.priority ?? "normal"] ?? 1) || a.id - b.id)[0];
 }
 
 function branchTotals(branch: readonly unknown[]) {
@@ -74,7 +95,7 @@ function branchTotals(branch: readonly unknown[]) {
 		if (e.type !== "message" || e.message?.role !== "toolResult" || e.message.toolName !== "task") continue;
 		const list = e.message.details?.tasks;
 		if (!Array.isArray(list)) continue;
-		c.tasks = { done: list.filter((t) => t.done).length, total: list.length };
+		c.tasks = { done: list.filter((t) => t.done).length, total: list.length, next: nextTask(list)?.text };
 		break;
 	}
 	c.head = branch.slice();
@@ -99,6 +120,34 @@ export default function (pi: ExtensionAPI) {
 	pi.on("session_start", async (_event, ctx) => {
 		const theme = ctx.ui.theme;
 
+		// Work in flight: tasks and background jobs, above the editor so the
+		// footer stays a one-line summary. Renders nothing when idle.
+		ctx.ui.setWidget(
+			"work",
+			(_tui, widgetTheme) => ({
+				invalidate() {},
+				render(width: number): string[] {
+					const lines: string[] = [];
+					const { tasks } = branchTotals(ctx.sessionManager.getBranch());
+					if (tasks && tasks.total > 0) {
+						const pending = tasks.total - tasks.done;
+						const label =
+							pending > 0
+								? `${tasks.done}/${tasks.total} tasks` + (tasks.next ? ` · next: ${tasks.next}` : "")
+								: `✓ all ${tasks.total} tasks done`;
+						lines.push(widgetTheme.fg(pending > 0 ? "accent" : "success", label));
+					}
+					const bg = bgInfo(Date.now());
+					if (bg.running > 0) {
+						const label = `${bg.running} running` + (bg.label ? ` · ${bg.label}` : "");
+						lines.push(widgetTheme.fg("warning", label));
+					}
+					return lines.map((line) => truncateToWidth(` ${line}`, width));
+				},
+			}),
+			{ placement: "aboveEditor" },
+		);
+
 		ctx.ui.setFooter((tui, _theme, footerData) => {
 			const unsub = footerData.onBranchChange(() => tui.requestRender());
 
@@ -106,7 +155,7 @@ export default function (pi: ExtensionAPI) {
 				dispose: unsub,
 				invalidate() {},
 				render(width: number): string[] {
-					const { input, output, cost, tasks } = branchTotals(ctx.sessionManager.getBranch());
+					const { input, output, cost } = branchTotals(ctx.sessionManager.getBranch());
 
 					const fmt = (n: number) =>
 						n < 1000 ? `${n}` : n < 1_000_000 ? `${(n / 1000).toFixed(1)}k` : `${(n / 1_000_000).toFixed(1)}M`;
@@ -124,15 +173,7 @@ export default function (pi: ExtensionAPI) {
 					const branch = footerData.getGitBranch();
 					if (branch) leftParts.push(theme.fg("dim", `(${branch})`));
 
-					// Work in flight: open tasks and running background jobs.
-					if (tasks && tasks.total > 0 && width >= 55) {
-						const pending = tasks.total - tasks.done;
-						const label = pending > 0 ? `${tasks.done}/${tasks.total} tasks` : `✓ ${tasks.total} tasks`;
-						leftParts.push(theme.fg(pending > 0 ? "accent" : "success", label));
-					}
-					const bgRunning = runningBgTasks(Date.now());
-					if (bgRunning > 0 && width >= 55) leftParts.push(theme.fg("warning", `⚙ ${bgRunning}`));
-
+					// Work in flight lives in the widget above the editor, not here.
 					let tokenStr =
 						theme.fg("dim", `↑`) + theme.fg("accent", fmt(input)) + theme.fg("dim", " ↓") + theme.fg("accent", fmt(output));
 					if (ctxUsage?.tokens != null && ctxUsage?.percent != null && width >= 70) {
