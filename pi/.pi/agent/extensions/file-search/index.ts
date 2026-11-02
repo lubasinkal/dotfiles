@@ -7,11 +7,11 @@
  * Content search lives in the snippet tool (lib/snippet.ts); raw rg
  * remains available via bash when needed.
  *
- * Uses system `fd` binary from PATH. If not installed, the tool reports
- * a clear error. Output is truncated to 2000 lines/50KB with full output
- * saved to a temp file when cut off.
+ * Uses `fd` from pi's bundled bin dir (~/.pi/agent/bin) or PATH. If not
+ * installed, the tool reports a clear error. Output is truncated to 2000
+ * lines/50KB with full output saved to a temp file when cut off.
  *
- * Install: copy to ~/.pi/agent/extensions/file-search.ts, then /reload.
+ * Install: copy to ~/.pi/agent/extensions/file-search/, then /reload.
  */
 
 import { execFile } from "node:child_process";
@@ -22,6 +22,7 @@ import { promisify } from "node:util";
 import { Type } from "@earendil-works/pi-ai";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
+import { piEnv } from "../../lib/shared.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -157,6 +158,7 @@ async function runTool(
       timeout: EXEC_TIMEOUT_MS,
       maxBuffer: 10 * 1024 * 1024, // 10MB
       encoding: "utf8",
+      env: piEnv(),
     });
     stdout = result.stdout;
     stderr = result.stderr;

@@ -39,4 +39,4 @@
 .pi/agent/memory/
 
 # Typecheck deps (symlinks to global install)
-.pi/agent/node_modules/
+.pi/agent/node_modules

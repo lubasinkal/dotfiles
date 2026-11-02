@@ -28,6 +28,24 @@ export function q(s: string): string {
 	return "'" + s.replace(/'/g, `'\\''`) + "'";
 }
 
+/**
+ * Environment for spawned processes with pi's bundled bin dir
+ * (`~/.pi/agent/bin`: fd, rg, pi) prepended to PATH.
+ *
+ * pi's own bash tool prepends that dir, but the pi process's inherited
+ * PATH does not include it — so raw child_process calls would fail with
+ * ENOENT even though `fd`/`rg` work in bash. Use this for every spawn.
+ */
+export function piEnv(): NodeJS.ProcessEnv {
+	const root = process.env.PI_MANAGED_INSTALL_ROOT;
+	const binDir = root
+		? path.resolve(root, "..", "bin")
+		: path.join(os.homedir(), ".pi", "agent", "bin");
+	const cur = process.env.PATH ?? "";
+	if (cur.split(path.delimiter).includes(binDir)) return process.env;
+	return { ...process.env, PATH: `${binDir}${path.delimiter}${cur}` };
+}
+
 /** Truncate a string to maxBytes (UTF-8 safe). */
 export function truncate(s: string, maxBytes: number): string {
 	const b = Buffer.from(s, "utf8");
@@ -57,6 +75,7 @@ export function run(
 			timeout: timeoutMs,
 			maxBuffer: 64 * 1024 * 1024,
 			shell: "/bin/bash",
+			env: piEnv(),
 		});
 		return truncate(raw, maxBytes);
 	} catch (err: any) {
@@ -89,6 +108,7 @@ export function runAsync(
 			stdio: ["ignore", "pipe", "pipe"],
 			shell: true,
 			timeout: timeoutMs,
+			env: piEnv(),
 		});
 		child.stdout.on("data", (d: Buffer) => {
 			out += d.toString();
@@ -124,7 +144,7 @@ export function findBin(cwd: string, name: string): string | null {
 	const local = path.join(cwd, "node_modules", ".bin", name);
 	if (fs.existsSync(local)) return local;
 	try {
-		const out = execSync(`command -v ${name}`, { cwd, encoding: "utf8", timeout: 3000 }).trim();
+		const out = execSync(`command -v ${name}`, { cwd, encoding: "utf8", timeout: 3000, env: piEnv() }).trim();
 		return out || null;
 	} catch {
 		return null;
