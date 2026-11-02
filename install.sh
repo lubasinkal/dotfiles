@@ -68,6 +68,19 @@ run_stow
 
 echo "Dotfiles linked successfully."
 
+echo "==> Linking pi extension test deps"
+pi_version_file="$HOME/.pi/agent/install/current-version"
+if [[ -f "$pi_version_file" ]]; then
+  read -r pi_version < "$pi_version_file"
+  pi_modules="$HOME/.pi/agent/install/releases/$pi_version/node_modules"
+  if [[ -d "$pi_modules" ]]; then
+    ln -sfn "$pi_modules" "$HOME/.pi/agent/node_modules"
+    echo "    ~/.pi/agent/node_modules -> $pi_modules (for node test-*.ts)"
+  else
+    echo "    skipped: $pi_modules is missing" >&2
+  fi
+fi
+
 echo "==> Initializing Git submodules"
 git submodule update --init --recursive
 

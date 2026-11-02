@@ -1,21 +1,9 @@
 // Test harness for bg — loads the extension with a mock pi API.
-// Run: node test-bg.ts   (node 22 strips types) or bun run test-bg.ts
+// Run: node test-bg.ts (plain node) or bun run test-bg.ts
+import "./test-hooks.ts";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
-import { registerHooks } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-
-// Pi resolves "./x.js" to "./x.ts" via jiti; teach node the same trick.
-registerHooks({
-	resolve(spec, ctx, next) {
-		try {
-			return next(spec, ctx);
-		} catch (err) {
-			if (!spec.endsWith(".js")) throw err;
-			return next(`${spec.slice(0, -3)}.ts`, ctx);
-		}
-	},
-});
 
 const home = mkdtempSync(join(tmpdir(), "pi-bghome-"));
 process.env.HOME = home;

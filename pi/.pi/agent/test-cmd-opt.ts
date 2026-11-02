@@ -1,4 +1,6 @@
 // Test harness for cmd-opt.ts — loads the extension with a mock pi API.
+// Run: node test-cmd-opt.ts (plain node) or bun run test-cmd-opt.ts
+import "./test-hooks.ts";
 import { join } from "node:path";
 
 function makeMockPi() {
