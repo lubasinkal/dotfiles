@@ -69,9 +69,9 @@ the imports need.
 | `test-git-guard.ts` | commit detection, secret/debug blocking, `-a`, commit target repo, bypass |
 | `test-quality-gate.ts` | added-line-only, failed edits don't arm it, session cwd |
 | `test-statusline.ts` | footer and widget content, width fitting, idle state, live jobs |
-| `test-subagent.ts` | agent discovery: both `tools:` spellings, malformed files |
+| `test-subagent.ts` | agent discovery: both `tools:` spellings, malformed files, every loaded md file parses, agent tool lists name real tools |
 | `test-lib.ts` | `diff-hunks` path quoting, `check` parsing tsc/eslint, `code-index` |
-| `test-hooks.ts` | shared bootstrap for jiti's `./x.js` → `./x.ts` |
+| `test-hooks.ts` | shared bootstrap: `./x.js` → `./x.ts` and extensionless imports |
 
 ## Caveats
 

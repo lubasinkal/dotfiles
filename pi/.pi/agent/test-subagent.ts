@@ -36,6 +36,60 @@ ok("per-agent thinking kept", byName.get("string-tools")?.thinking === "low", St
 ok("per-agent model kept", byName.get("array-tools")?.model === "opencode/mimo-v2.6-flash", String(byName.get("array-tools")?.model));
 ok("no empty tools array leaks", byName.get("array-tools")?.tools?.length === 2);
 
+// ── every md file the harness loads must parse ────────────────────
+// An unquoted colon+space in a description is a hard YAML error that drops the
+// whole file ("description: Recon: locate ...").
+const { parseFrontmatter } = await import("@earendil-works/pi-coding-agent");
+const { readdirSync, readFileSync } = await import("node:fs");
+for (const dir of ["agents", "prompts"]) {
+	for (const file of readdirSync(join(process.cwd(), dir)).filter((f: string) => f.endsWith(".md"))) {
+		const path = join(process.cwd(), dir, file);
+		let frontmatter: Record<string, unknown> = {};
+		let error = "";
+		try {
+			frontmatter = parseFrontmatter<Record<string, unknown>>(readFileSync(path, "utf8")).frontmatter;
+		} catch (err) {
+			error = err instanceof Error ? err.message.split("\n")[0] : String(err);
+		}
+		ok(`${dir}/${file} frontmatter parses`, error === "", error);
+		ok(`${dir}/${file} has a description`, typeof frontmatter.description === "string" && frontmatter.description.length > 0);
+	}
+}
+
+// ── agent tool lists must name tools that exist ───────────────────
+// This is what catches `web_fetch`, command -v is not a tool here.
+const BASE_TOOLS = [
+	// built-in
+	"read", "write", "edit", "bash",
+	// npm:pi-web-access
+	"web_search", "fetch_content", "get_search_content", "source_check",
+];
+const registered = new Set<string>(BASE_TOOLS);
+const mockPi = {
+	registerTool: (t: any) => registered.add(t.name),
+	registerCommand: () => {},
+	on: () => {},
+	events: { on: () => () => {}, emit: () => {} },
+};
+for (const entry of readdirSync(join(process.cwd(), "extensions"))) {
+	const file = entry.endsWith(".ts") ? entry : join(entry, "index.ts");
+	try {
+		const mod = await import(join(process.cwd(), "extensions", file));
+		mod.default?.(mockPi);
+	} catch (err) {
+		ok(`extension ${entry} loads for tool discovery`, false, err instanceof Error ? err.message.split("\n")[0] : "");
+	}
+}
+
+// Read the shipped agent files directly: discovery resolves against $HOME, and
+// this test deliberately points $HOME at a fixture directory.
+for (const file of readdirSync(join(process.cwd(), "agents")).filter((f: string) => f.endsWith(".md"))) {
+	const { frontmatter } = parseFrontmatter<Record<string, unknown>>(readFileSync(join(process.cwd(), "agents", file), "utf8"));
+	const tools = (typeof frontmatter.tools === "string" ? frontmatter.tools.split(",") : []).map((t) => t.trim()).filter(Boolean);
+	const unknown = tools.filter((t) => !registered.has(t));
+	ok(`${file} lists only real tools`, unknown.length === 0, `unknown: ${unknown.join(", ")}`);
+}
+
 rmSync(home, { recursive: true, force: true });
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
