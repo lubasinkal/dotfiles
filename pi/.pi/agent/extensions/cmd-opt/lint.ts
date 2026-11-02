@@ -32,14 +32,24 @@ export function lint(cmd: string): LintFlag[] {
 	});
 }
 
-/** Apply rewrite rules to a command, returning the optimized form. */
+/**
+ * Apply rewrite rules to a command, returning the optimized form.
+ *
+ * A replacement is computed against the string it matched, so rewrites are
+ * applied one at a time and the result is re-linted: applying a batch computed
+ * from the original command would let each later rewrite overwrite the earlier
+ * ones.
+ */
 export function applyRewrites(cmd: string): { cmd: string; applied: LintFlag[] } {
 	let next = cmd;
 	const applied: LintFlag[] = [];
-	for (const flag of lint(next)) {
-		if (flag.severity !== "rewrite" || !flag.replacement) continue;
-		next = flag.replacement;
-		applied.push(flag);
+	for (let pass = 0; pass < 10; pass++) {
+		const rewrite = lint(next).find(
+			(flag) => flag.severity === "rewrite" && flag.replacement && flag.replacement !== next,
+		);
+		if (!rewrite?.replacement) break;
+		next = rewrite.replacement;
+		applied.push(rewrite);
 	}
 	return { cmd: next, applied };
 }

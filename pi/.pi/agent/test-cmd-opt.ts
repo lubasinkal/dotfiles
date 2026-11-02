@@ -123,5 +123,15 @@ ev = { toolName: "bash", toolCallId: "t3", input: {}, content: [{ type: "text", 
 res = await trHandler(ev, {});
 ok("capper leaves small output", res === undefined);
 
+// Two independent rewrites on one line must both survive.
+{
+	const { applyRewrites } = await import(join(process.cwd(), "extensions", "cmd-opt", "lint.ts"));
+	const one = applyRewrites("command -v node");
+	ok("single rewrite applies", one.cmd === "command -v node", one.cmd);
+	const two = applyRewrites("which node && which npm");
+	ok("two rewrites both apply", two.cmd === "command -v node && command -v npm", two.cmd);
+	ok("two rewrites reported as applied", two.applied.length >= 2, String(two.applied.length));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

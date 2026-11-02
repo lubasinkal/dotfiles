@@ -10,7 +10,7 @@
  */
 
 import { Type } from "typebox";
-import { defineTool, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { defineTool } from "@earendil-works/pi-coding-agent";
 import { DEFAULT_CAP, q, truncate, run, textResult } from "./shared.js";
 
 export const diffHunksTool = defineTool({

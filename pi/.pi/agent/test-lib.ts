@@ -65,6 +65,28 @@ const root = mkdtempSync(join(tmpdir(), "pi-lib-"));
 	ok("tsc reports the location", tscOut.includes("a.ts:3"), tscOut);
 }
 
+// ── code-index: prefiltered scan still finds definitions ─────────────
+{
+	const repo = join(root, "idxrepo");
+	mkdirSync(repo, { recursive: true });
+	const git = (args: string[]) => execFileSync("git", ["-c", "user.email=t@t", "-c", "user.name=t", ...args], { cwd: repo, encoding: "utf8" });
+	git(["init", "-q"]);
+	// A big non-code file that used to be scanned line by line.
+	writeFileSync(join(repo, "notes.txt"), "just prose\n".repeat(50_000));
+	writeFileSync(join(repo, "lib.ts"), "export function alpha() {}\nexport class Beta {}\nconst noise = 1;\n");
+	git(["add", "."]);
+
+	const { codeIndexTool } = await import(join(process.cwd(), "lib", "code-index.ts"));
+	const out = (await codeIndexTool.execute("id", { query: "alpha", force: true }, undefined, undefined, { cwd: repo })).content[0].text;
+	ok("code-index finds a function", /function alpha/.test(out), out);
+	const beta = (await codeIndexTool.execute("id", { query: "beta" }, undefined, undefined, { cwd: repo })).content[0].text;
+	ok("code-index finds a class", /class Beta/.test(beta), beta);
+	const prose = (await codeIndexTool.execute("id", { query: "prose" }, undefined, undefined, { cwd: repo })).content[0].text;
+	ok("code-index skips non-code text", /\(none\)/.test(prose), prose);
+	const worse = (await codeIndexTool.execute("id", { query: "just" }, undefined, undefined, { cwd: repo })).content[0].text;
+	ok("code-index does not index 50k prose lines", /\(none\)/.test(worse), worse.slice(0, 120));
+}
+
 rmSync(root, { recursive: true, force: true });
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

@@ -84,7 +84,14 @@ function nextTask(tasks: readonly { id: number; text: string; done: boolean; pri
 		.sort((a, b) => (rank[a.priority ?? "normal"] ?? 1) - (rank[b.priority ?? "normal"] ?? 1) || a.id - b.id)[0];
 }
 
+let memo: { length: number; last: unknown; out: typeof cache } | undefined;
+
 function branchTotals(branch: readonly unknown[]) {
+	// Rendering happens per frame and both surfaces ask for this: reuse the last
+	// result while the branch is unchanged instead of re-walking it.
+	const last = branch[branch.length - 1];
+	if (memo && memo.length === branch.length && memo.last === last) return memo.out;
+
 	const c = cache;
 	// Reuse the cached prefix when the branch only grew (common case).
 	const reusable = Math.min(c.head.length, branch.length);
@@ -117,6 +124,7 @@ function branchTotals(branch: readonly unknown[]) {
 		break;
 	}
 	c.head = branch.slice();
+	memo = { length: branch.length, last, out: c };
 	return c;
 }
 

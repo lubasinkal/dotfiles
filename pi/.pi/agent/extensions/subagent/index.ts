@@ -303,6 +303,7 @@ async function runSingleAgent(
 	onUpdate: OnUpdateCallback | undefined,
 	makeDetails: (results: SingleResult[]) => SubagentDetails,
 	modelOverride?: string,
+	dispatchDefaults?: { model?: string; thinkingLevel?: string },
 ): Promise<SingleResult> {
 	const agent = agents.find((a) => a.name === agentName);
 
@@ -321,12 +322,16 @@ async function runSingleAgent(
 	}
 
 	const args: string[] = ["--mode", "json", "-p", "--no-session"];
-	const effectiveModel = modelOverride ?? agent.model;
+	// Without an explicit model the child used pi's own default, command -v can differ
+	// from the session that dispatched it; inherit instead.
+	const inheritsDispatch = !modelOverride && !agent.model;
+	const effectiveModel = modelOverride ?? agent.model ?? dispatchDefaults?.model;
 	if (effectiveModel) args.push("--model", effectiveModel);
 	if (agent.tools && agent.tools.length > 0) args.push("--tools", agent.tools.join(","));
 	const VALID_THINKING = ["off", "minimal", "low", "medium", "high", "xhigh", "max"];
-	if (agent.thinking && VALID_THINKING.includes(agent.thinking)) {
-		args.push("--thinking", agent.thinking);
+	const effectiveThinking = agent.thinking ?? (inheritsDispatch ? dispatchDefaults?.thinkingLevel : undefined);
+	if (effectiveThinking && VALID_THINKING.includes(effectiveThinking)) {
+		args.push("--thinking", effectiveThinking);
 	}
 
 	let tmpPromptDir: string | null = null;
@@ -404,10 +409,6 @@ async function runSingleAgent(
 					emitUpdate();
 				}
 
-				if (event.type === "tool_result_end" && event.message) {
-					currentResult.messages.push(event.message as Message);
-					emitUpdate();
-				}
 			};
 
 			proc.stdout.on("data", (data) => {
@@ -427,7 +428,9 @@ async function runSingleAgent(
 
 			proc.on("close", (code) => {
 				if (buffer.trim()) processLine(buffer);
-				resolve(code ?? 0);
+				// code is null when the child died from a signal (OOM, kill):
+				// that is a failure, not success with empty output.
+				resolve(code ?? 1);
 			});
 
 			proc.on("error", (err: Error) => {
@@ -519,6 +522,10 @@ export default function (pi: ExtensionAPI) {
 
 		async execute(_toolCallId, params, signal, onUpdate, ctx) {
 			const agentScope: AgentScope = params.agentScope ?? "user";
+			const dispatchDefaults = {
+				model: ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined,
+				thinkingLevel: ctx.thinkingLevel,
+			};
 			const discovery = discoverAgents(ctx.cwd, agentScope);
 			const agents = discovery.agents;
 			const confirmProjectAgents = params.confirmProjectAgents ?? true;
@@ -550,7 +557,12 @@ export default function (pi: ExtensionAPI) {
 				};
 			}
 
-			if ((agentScope === "project" || agentScope === "both") && confirmProjectAgents && ctx.hasUI) {
+			if (
+				(agentScope === "project" || agentScope === "both") &&
+				confirmProjectAgents &&
+				ctx.hasUI &&
+				!ctx.isProjectTrusted()
+			) {
 				const requestedAgentNames = new Set<string>();
 				if (params.chain) for (const step of params.chain) requestedAgentNames.add(step.agent);
 				if (params.tasks) for (const t of params.tasks) requestedAgentNames.add(t.agent);
@@ -609,6 +621,7 @@ export default function (pi: ExtensionAPI) {
 						chainUpdate,
 						makeDetails("chain"),
 						step.model,
+						dispatchDefaults,
 					);
 					results.push(result);
 
@@ -671,27 +684,45 @@ export default function (pi: ExtensionAPI) {
 				};
 
 				const results = await mapWithConcurrencyLimit(params.tasks, MAX_CONCURRENCY, async (t, index) => {
-					const result = await runSingleAgent(
-						ctx.cwd,
-						agents,
-						t.agent,
-						t.task,
-						t.cwd,
-						undefined,
-						signal,
-						// Per-task update callback
-						(partial) => {
-							if (partial.details?.results[0]) {
-								allResults[index] = partial.details.results[0];
-								emitParallelUpdate();
-							}
-						},
-						makeDetails("parallel"),
-						t.model,
-					);
-					allResults[index] = result;
-					emitParallelUpdate();
-					return result;
+					try {
+						const result = await runSingleAgent(
+							ctx.cwd,
+							agents,
+							t.agent,
+							t.task,
+							t.cwd,
+							undefined,
+							signal,
+							// Per-task update callback
+							(partial) => {
+								if (partial.details?.results[0]) {
+									allResults[index] = partial.details.results[0];
+									emitParallelUpdate();
+								}
+							},
+							makeDetails("parallel"),
+							t.model,
+							dispatchDefaults,
+						);
+						allResults[index] = result;
+						emitParallelUpdate();
+						return result;
+					} catch (err) {
+						// runSingleAgent throws on abort; one task must not discard what
+						// the others already produced.
+						const failed: SingleResult = {
+							agent: t.agent,
+							agentSource: "unknown",
+							task: t.task,
+							exitCode: 1,
+							messages: [],
+							stderr: err instanceof Error ? err.message : String(err),
+							usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cost: 0, contextTokens: 0, turns: 0 },
+						};
+						allResults[index] = failed;
+						emitParallelUpdate();
+						return failed;
+					}
 				});
 
 				const successCount = results.filter((r) => !isFailedResult(r)).length;
@@ -724,7 +755,8 @@ export default function (pi: ExtensionAPI) {
 					signal,
 					onUpdate,
 					makeDetails("single"),
-						params.model,
+					params.model,
+					dispatchDefaults,
 				);
 				const isError = isFailedResult(result);
 				if (isError) {

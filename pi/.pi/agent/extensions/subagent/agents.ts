@@ -24,6 +24,21 @@ export interface AgentDiscoveryResult {
 	projectAgentsDir: string | null;
 }
 
+/**
+ * Normalize a frontmatter `tools` value. Both spellings occur in the wild:
+ * `tools: read, bash` and `tools: [read, bash]`. Anything else yields no tools
+ * rather than throwing — discovery runs over every file in the directory, so a
+ * single bad agent must not take the rest down.
+ */
+function parseToolList(value: unknown): string[] | undefined {
+	const raw = Array.isArray(value) ? value : typeof value === "string" ? value.split(",") : [];
+	const tools = raw
+		.filter((t): t is string => typeof t === "string")
+		.map((t) => t.trim())
+		.filter(Boolean);
+	return tools.length > 0 ? tools : undefined;
+}
+
 function loadAgentsFromDir(dir: string, source: "user" | "project"): AgentConfig[] {
 	const agents: AgentConfig[] = [];
 
@@ -50,23 +65,20 @@ function loadAgentsFromDir(dir: string, source: "user" | "project"): AgentConfig
 			continue;
 		}
 
-		const { frontmatter, body } = parseFrontmatter<Record<string, string>>(content);
+		// Frontmatter values are `unknown`: a real YAML parser produces scalars,
+		// lists and maps, and `tools: [read, bash]` must not throw here.
+		const { frontmatter, body } = parseFrontmatter<Record<string, unknown>>(content);
 
-		if (!frontmatter.name || !frontmatter.description) {
+		if (typeof frontmatter.name !== "string" || typeof frontmatter.description !== "string") {
 			continue;
 		}
-
-		const tools = frontmatter.tools
-			?.split(",")
-			.map((t: string) => t.trim())
-			.filter(Boolean);
 
 		agents.push({
 			name: frontmatter.name,
 			description: frontmatter.description,
-			tools: tools && tools.length > 0 ? tools : undefined,
-			model: frontmatter.model,
-			thinking: frontmatter.thinking,
+			tools: parseToolList(frontmatter.tools),
+			model: typeof frontmatter.model === "string" ? frontmatter.model : undefined,
+			thinking: typeof frontmatter.thinking === "string" ? frontmatter.thinking : undefined,
 			systemPrompt: body,
 			source,
 			filePath,

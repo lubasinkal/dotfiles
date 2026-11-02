@@ -16,7 +16,7 @@ import * as path from "node:path";
 import { createHash } from "node:crypto";
 import * as os from "node:os";
 import { Type } from "typebox";
-import { defineTool, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { defineTool } from "@earendil-works/pi-coding-agent";
 import { IGNORES, q, run, gitRoot, textResult } from "./shared.js";
 
 // ── index types ─────────────────────────────────────────────────────────
@@ -37,6 +37,7 @@ interface IndexFile {
 
 const INDEX_DIR = path.join(process.env.HOME ?? os.homedir(), ".cache", "pi-code-index");
 const INDEX_MAX_ENTRIES = 20_000;
+const INDEX_MAX_BYTES = 8_000_000;
 const INDEX_MAX_AGE_MS = 30_000;
 
 // ── kind derivation ─────────────────────────────────────────────────────
@@ -113,9 +114,15 @@ function buildIndex(root: string): IndexFile {
 	let overflow = false;
 
 	for (const group of INDEX_GROUPS) {
-		const cmd = `rg --no-heading --line-number --color=never ${group.globs} ${ignoreArgs} -e "." .`;
-		const raw = run(cmd, root, 30_000, 4_000_000);
+		// Hand the group's own regex to ripgrep instead of scanning every line:
+		// rust-regex accepts the same syntax with (?P<name>...) groups, and this
+		// keeps large repos under the output cap.
+		const filter = group.re.source.replace(/\(\?<(\w+)>/g, "(?P<$1>");
+		const cmd = `rg --no-heading --line-number --color=never ${group.globs} ${ignoreArgs} -e ${q(filter)} .`;
+		const raw = run(cmd, root, 30_000, INDEX_MAX_BYTES);
 		if (raw.startsWith("[exit ")) continue;
+		// run() appends an ellipsis when it cuts output: the index is incomplete.
+		if (raw.endsWith("…") && raw.length >= INDEX_MAX_BYTES - 8) overflow = true;
 
 		for (const line of raw.split("\n")) {
 			if (!line || entries.length >= INDEX_MAX_ENTRIES) {

@@ -9,7 +9,7 @@
  */
 
 import { Type } from "typebox";
-import { defineTool, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { defineTool } from "@earendil-works/pi-coding-agent";
 import { IGNORES, q, run, textResult } from "./shared.js";
 
 /** Center a line around the match so the interesting part survives truncation. */
@@ -51,7 +51,6 @@ export const snippetTool = defineTool({
 		const rgArgs = ["--no-heading", "--line-number", "--color=never", "--max-count=40"];
 
 		const ignoreArgs = IGNORES.flatMap((ig) => ["--glob", ig]);
-		if (params.path) ignoreArgs.push("--glob", `!${params.path}`);
 
 		const caseFlag = params.caseSensitive === false ? [] : params.caseSensitive ? ["--case-sensitive"] : ["--smart-case"];
 
@@ -60,6 +59,11 @@ export const snippetTool = defineTool({
 
 		if (raw.startsWith("[exit 1]")) {
 			return textResult(`0 matches for ${q(params.query)} in ${searchDir}`);
+		}
+		// Any other non-zero exit is a real failure (bad regex, unreadable path),
+		// not a set of matches.
+		if (raw.startsWith("[exit ")) {
+			return textResult(`snippet failed for ${q(params.query)}: ${raw.slice(0, 400)}`);
 		}
 
 		const lines = raw.split("\n").filter(Boolean);

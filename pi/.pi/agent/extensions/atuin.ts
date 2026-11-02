@@ -14,6 +14,23 @@ import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-a
 const ATUIN_AUTHOR = "pi";
 const ATUIN_TIMEOUT_MS = 10_000;
 
+/**
+ * Whether atuin is installed, resolved once per session. Without this, every
+ * bash call pays two failed spawns (start + end) on hosts that don't use Atuin.
+ */
+let available: boolean | undefined;
+
+async function atuinAvailable(pi: ExtensionAPI): Promise<boolean> {
+	if (available !== undefined) return available;
+	try {
+		const result = await pi.exec("atuin", ["--version"], { timeout: 2_000 });
+		available = result.code === 0;
+	} catch {
+		available = false;
+	}
+	return available;
+}
+
 async function startHistory(
 	pi: ExtensionAPI,
 	cwd: string,
@@ -85,6 +102,7 @@ export default function atuinPiExtension(pi: ExtensionAPI) {
 	// command.
 	pi.on("tool_call", async (event, ctx: ExtensionContext) => {
 		if (event.toolName !== "bash") return;
+		if (!(await atuinAvailable(pi))) return;
 
 		const command = (event.input as { command?: unknown }).command;
 		if (typeof command !== "string" || command.length === 0) return;

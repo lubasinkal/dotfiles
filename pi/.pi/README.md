@@ -36,7 +36,7 @@ via a manual symlink (`~/.pi → ~/dotfiles/pi/.pi`), not stow.
 | `subagent/` | Spawns separate `pi` processes; single/parallel/chain modes | `subagent` |
 | `tasktracker/` | Task list with priorities, notes, branch-aware state, optional cross-session `tasks.json` | `task`, `/tasks` || `token-tools/` | Registers efficient primitives defined in `lib/` | `snippet`, `diff-hunks`, `code-index`, `files-changed`, `check` |
 | `ui/` | Footer (dir/branch, tokens, ctx%, cost, model) + a work widget above the editor (tasks, running jobs) | (event hook) |
-| `atuin.ts` | Records pi's bash commands to Atuin history | (event hook) |
+| `atuin.ts` | Records pi's bash commands to Atuin history (no-op when atuin isn't installed) | (event hook) |
 
 Web search/fetch comes from the npm package `pi-web-access` (below), not a local extension.
 
@@ -65,6 +65,8 @@ Run any of these with plain `node` (22+, type stripping) or `bun`:
 - `test-git-guard.ts` — commit detection, secret/`.env`/debug blocking, `-a` handling, bypass, fail-open outside a repo.
 - `test-statusline.ts` — footer content and width fitting, the work widget (task progress, next task by priority, running jobs, idle = no lines).
 - `test-lib.ts` — `lib/` tools: diff-hunks path quoting against a hostile filename, `check` parsing stylish eslint and tsc output.
+- `test-quality-gate.ts` — added-line-only detection, failed edits don't arm the gate, session cwd honoured.
+- `test-subagent.ts` — agent discovery: `tools: read, bash` and `tools: [read, bash]`, malformed agents can't break the rest.
 - `test-hooks.ts` — shared bootstrap; teaches node jiti's `./x.js` → `./x.ts` resolution.
 
 All of them need `node_modules/` in this directory. `install.sh` symlinks it to

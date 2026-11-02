@@ -11,7 +11,7 @@
  */
 
 import { Type } from "typebox";
-import { defineTool, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { defineTool } from "@earendil-works/pi-coding-agent";
 import { findBin, runAsync, textResult } from "./shared.js";
 
 function parseTsc(out: string): { errors: string[]; rawCount: number } {

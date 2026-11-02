@@ -12,14 +12,17 @@
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { execSync } from "node:child_process";
+import { piEnv } from "../../lib/shared.js";
 
 const EDIT_TOOLS = new Set(["edit", "write"]);
 
 export default function (pi: ExtensionAPI) {
   let editedThisTurn = false;
 
-  pi.on("tool_call", async (event) => {
-    if (EDIT_TOOLS.has(event.toolName)) {
+  // Count the edit only when it succeeded, so a blocked or failed edit does not
+  // turn the gate on.
+  pi.on("tool_result", async (event) => {
+    if (EDIT_TOOLS.has(event.toolName) && !(event as { isError?: boolean }).isError) {
       editedThisTurn = true;
     }
   });
@@ -31,16 +34,18 @@ export default function (pi: ExtensionAPI) {
     try {
       const diff = execSync(
         "git diff --unified=0 --no-color HEAD 2>/dev/null || echo ''",
-        { encoding: "utf8", timeout: 3000, stdio: ["ignore", "pipe", "pipe"] }
+        // Diff the session's directory, not wherever the pi process started.
+        { cwd: ctx.cwd, encoding: "utf8", timeout: 3000, stdio: ["ignore", "pipe", "pipe"], env: piEnv() }
       );
 
       if (!diff.trim()) return;
 
       const hits: string[] = [];
 
-      if (/\b(it|describe|test|context)\.only\b/.test(diff))
+      // Added lines only: removing a `.only`/`debugger` must not be flagged.
+      if (/^\+(?!\+\+).*\b(it|describe|test|context)\.only\b/m.test(diff))
         hits.push(".only in tests");
-      if (/\bdebugger\b/.test(diff))
+      if (/^\+(?!\+\+).*\bdebugger\b/m.test(diff))
         hits.push("debugger statement");
       if (/^\+.*@ts-ignore\b/m.test(diff))
         hits.push("@ts-ignore (use @ts-expect-error instead)");
