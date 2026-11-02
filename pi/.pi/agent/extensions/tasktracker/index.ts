@@ -130,36 +130,62 @@ function errText(message: string, tasks: Task[], nextId: number, persisted: bool
 // ── TUI panel ───────────────────────────────────────────────────────────
 
 class TaskPanel {
-	private tasks: Task[];
+	private getTasks: () => Task[];
 	private theme: Theme;
 	private onClose: () => void;
-	private cachedWidth?: number;
+	private onRefresh?: () => void;
+	private requestRender?: () => void;
+	private cachedKey?: string;
 	private cachedLines?: string[];
 
-	constructor(tasks: Task[], theme: Theme, onClose: () => void) {
-		this.tasks = tasks;
-		this.theme = theme;
-		this.onClose = onClose;
+	constructor(options: {
+		getTasks: () => Task[];
+		theme: Theme;
+		onClose: () => void;
+		onRefresh?: () => void;
+		requestRender?: () => void;
+	}) {
+		this.getTasks = options.getTasks;
+		this.theme = options.theme;
+		this.onClose = options.onClose;
+		this.onRefresh = options.onRefresh;
+		this.requestRender = options.requestRender;
 	}
 
 	handleInput(data: string): void {
-		if (matchesKey(data, "escape") || matchesKey(data, "ctrl+c")) this.onClose();
+		if (matchesKey(data, "escape") || matchesKey(data, "ctrl+c")) {
+			this.onClose();
+			return;
+		}
+		// r: re-read the branch (the source of truth) without closing the panel.
+		if (data === "r" || data === "R") {
+			this.onRefresh?.();
+			this.invalidate();
+			this.requestRender?.();
+		}
 	}
 
 	render(width: number): string[] {
-		if (this.cachedLines && this.cachedWidth === width) return this.cachedLines;
+		const tasks = this.getTasks();
+		// The list is read live, so the cache key has to cover its content too —
+		// otherwise a panel left open shows the tasks it started with.
+		const key = `${width}:${tasks.map((t) => `${t.id}${t.done ? 1 : 0}${t.priority}${t.text}${t.note ?? ""}`).join("|")}`;
+		if (this.cachedLines && this.cachedKey === key) return this.cachedLines;
+
 		const th = this.theme;
 		const lines: string[] = [""];
 		const title = th.fg("accent", " Tasks ");
-		lines.push(th.fg("borderMuted", "─".repeat(3)) + title + th.fg("borderMuted", "─".repeat(Math.max(0, width - 10))));
+		lines.push(truncateToWidth(th.fg("borderMuted", "─".repeat(3)) + title + th.fg("borderMuted", "─".repeat(Math.max(0, width - 10))), width));
 		lines.push("");
 
-		if (this.tasks.length === 0) {
+		if (tasks.length === 0) {
 			lines.push(truncateToWidth(`  ${th.fg("dim", "No tasks. Ask the agent to add some.")}`, width));
 		} else {
-			lines.push(truncateToWidth(`  ${th.fg("muted", counts(this.tasks))}`, width));
+			lines.push(truncateToWidth(`  ${th.fg("muted", counts(tasks))}`, width));
 			lines.push("");
-			for (const t of sorted(this.tasks)) {
+			const ordered = sorted(tasks);
+			const MAX_ROWS = 20;
+			for (const t of ordered.slice(0, MAX_ROWS)) {
 				const box = t.done ? th.fg("success", "✓") : th.fg("dim", "○");
 				const id = th.fg("accent", `#${t.id}`);
 				const prio = t.priority === "high" ? th.fg("warning", "!") : th.fg("dim", MARK[t.priority]);
@@ -167,18 +193,21 @@ class TaskPanel {
 				const note = t.note ? th.fg("dim", ` — ${t.note}`) : "";
 				lines.push(truncateToWidth(`  ${box} ${id} ${prio} ${body}${note}`, width));
 			}
+			if (ordered.length > MAX_ROWS) {
+				lines.push(truncateToWidth(`  ${th.fg("dim", `… ${ordered.length - MAX_ROWS} more (ask for the list in chat)`)}`, width));
+			}
 		}
 
 		lines.push("");
-		lines.push(truncateToWidth(`  ${th.fg("dim", "Escape to close")}`, width));
+		lines.push(truncateToWidth(`  ${th.fg("dim", "r refresh · Escape close")}`, width));
 		lines.push("");
-		this.cachedWidth = width;
+		this.cachedKey = key;
 		this.cachedLines = lines;
 		return lines;
 	}
 
 	invalidate(): void {
-		this.cachedWidth = undefined;
+		this.cachedKey = undefined;
 		this.cachedLines = undefined;
 	}
 }
@@ -202,14 +231,16 @@ export default function tasktracker(pi: ExtensionAPI) {
 			if (msg.role !== "toolResult" || msg.toolName !== "task") continue;
 			const details = msg.details as TaskDetails | undefined;
 			if (!details) continue;
-			tasks = details.tasks;
+			// Clone: this array lives in the session history. Aliasing it would let
+			// later pushes/toggles rewrite the transcript (and every branch reader).
+			tasks = details.tasks.map((t) => ({ ...t }));
 			nextId = details.nextId;
 			persisted = details.persisted;
 		}
 		if (tasks.length === 0 && !persisted) {
 			const saved = loadPersisted();
 			if (saved) {
-				tasks = saved.tasks;
+				tasks = saved.tasks.map((t) => ({ ...t }));
 				nextId = saved.nextId;
 				persisted = true;
 			}
@@ -309,7 +340,7 @@ export default function tasktracker(pi: ExtensionAPI) {
 					if (tasks.length === 0) {
 						const saved = loadPersisted();
 						if (saved) {
-							tasks = saved.tasks;
+							tasks = saved.tasks.map((t) => ({ ...t }));
 							nextId = saved.nextId;
 							return okText(`Loaded ${tasks.length} task(s) from tasks.json`, tasks, nextId, persisted);
 						}
@@ -367,11 +398,23 @@ export default function tasktracker(pi: ExtensionAPI) {
 	pi.registerCommand("tasks", {
 		description: "Show the task list for the current branch",
 		handler: async (_args, ctx) => {
+			// Rebuild from the branch first: it is the source of truth, and the
+			// in-memory copy can be behind after a rewind or a tool result the
+			// extension never saw.
+			reconstruct(ctx);
 			if (ctx.mode !== "tui") {
 				ctx.ui.notify(renderList(tasks), "info");
 				return;
 			}
-			await ctx.ui.custom<void>((_tui, theme, _kb, done) => new TaskPanel(tasks, theme, () => done()));
+			await ctx.ui.custom<void>((tui, theme, _kb, done) =>
+				new TaskPanel({
+					getTasks: () => tasks,
+					theme,
+					onClose: () => done(),
+					onRefresh: () => reconstruct(ctx),
+					requestRender: () => tui.requestRender(),
+				}),
+			);
 		},
 	});
 }

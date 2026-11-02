@@ -7,6 +7,8 @@
  */
 
 import os from "node:os";
+import fs from "node:fs";
+import path from "node:path";
 import type { AssistantMessage } from "@earendil-works/pi-ai";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
@@ -17,7 +19,31 @@ const cache = {
 	input: 0,
 	output: 0,
 	cost: 0,
+	tasks: undefined as { done: number; total: number } | undefined,
 };
+
+/** Running background tasks (from bg's on-disk registry), refreshed on a TTL. */
+let bgCache = { at: 0, running: 0 };
+
+function runningBgTasks(now: number): number {
+	if (now - bgCache.at < 2000) return bgCache.running;
+	let running = 0;
+	try {
+		const dir = path.join(os.homedir(), ".pi", "agent", "bg");
+		for (const file of fs.readdirSync(dir)) {
+			if (!file.endsWith(".json")) continue;
+			const meta = JSON.parse(fs.readFileSync(path.join(dir, file), "utf8")) as { id?: string };
+			if (!meta?.id) continue;
+			// Same derivation as bg: an exit-code file means finished.
+			if (fs.existsSync(path.join(dir, `${meta.id}.exit`))) continue;
+			running++;
+		}
+	} catch {
+		running = 0;
+	}
+	bgCache = { at: now, running };
+	return running;
+}
 
 function branchTotals(branch: readonly unknown[]) {
 	const c = cache;
@@ -28,6 +54,7 @@ function branchTotals(branch: readonly unknown[]) {
 	if (!(m === c.head.length && c.head.length <= branch.length)) {
 		// Branch changed underneath us (switch/fork/compaction) — full rescan.
 		c.input = c.output = c.cost = 0;
+		c.tasks = undefined;
 		m = 0;
 	}
 	for (let i = m; i < branch.length; i++) {
@@ -37,6 +64,18 @@ function branchTotals(branch: readonly unknown[]) {
 			c.output += e.message.usage.output ?? 0;
 			c.cost += e.message.usage.cost.total ?? 0;
 		}
+	}
+	// Task counts come from the last task tool result — no coupling to tasktracker.
+	for (let i = branch.length - 1; i >= 0; i--) {
+		const e = branch[i] as {
+			type: string;
+			message?: { role: string; toolName?: string; details?: { tasks?: { done: boolean }[] } };
+		};
+		if (e.type !== "message" || e.message?.role !== "toolResult" || e.message.toolName !== "task") continue;
+		const list = e.message.details?.tasks;
+		if (!Array.isArray(list)) continue;
+		c.tasks = { done: list.filter((t) => t.done).length, total: list.length };
+		break;
 	}
 	c.head = branch.slice();
 	return c;
@@ -67,7 +106,7 @@ export default function (pi: ExtensionAPI) {
 				dispose: unsub,
 				invalidate() {},
 				render(width: number): string[] {
-					const { input, output, cost } = branchTotals(ctx.sessionManager.getBranch());
+					const { input, output, cost, tasks } = branchTotals(ctx.sessionManager.getBranch());
 
 					const fmt = (n: number) =>
 						n < 1000 ? `${n}` : n < 1_000_000 ? `${(n / 1000).toFixed(1)}k` : `${(n / 1_000_000).toFixed(1)}M`;
@@ -84,6 +123,15 @@ export default function (pi: ExtensionAPI) {
 					leftParts.push(theme.fg("accent", shortenCwd(ctx.cwd)));
 					const branch = footerData.getGitBranch();
 					if (branch) leftParts.push(theme.fg("dim", `(${branch})`));
+
+					// Work in flight: open tasks and running background jobs.
+					if (tasks && tasks.total > 0 && width >= 55) {
+						const pending = tasks.total - tasks.done;
+						const label = pending > 0 ? `${tasks.done}/${tasks.total} tasks` : `✓ ${tasks.total} tasks`;
+						leftParts.push(theme.fg(pending > 0 ? "accent" : "success", label));
+					}
+					const bgRunning = runningBgTasks(Date.now());
+					if (bgRunning > 0 && width >= 55) leftParts.push(theme.fg("warning", `⚙ ${bgRunning}`));
 
 					let tokenStr =
 						theme.fg("dim", `↑`) + theme.fg("accent", fmt(input)) + theme.fg("dim", " ↓") + theme.fg("accent", fmt(output));

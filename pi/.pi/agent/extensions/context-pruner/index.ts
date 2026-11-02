@@ -59,6 +59,7 @@ import {
 
 let prevCumulative = 0;
 let consecutiveOverBudget = 0;
+let lastStatusPruned = -1;
 
 export default function (pi: ExtensionAPI) {
 	pi.on("context", async (event, ctx) => {
@@ -296,6 +297,12 @@ export default function (pi: ExtensionAPI) {
 			);
 		}
 		prevCumulative = prunedTotal;
+
+		// Footer counter for the status line; only touch it when the value moves.
+		if (prunedTotal !== lastStatusPruned) {
+			lastStatusPruned = prunedTotal;
+			ctx.ui.setStatus("pruner", prunedTotal > 0 ? `✂ ${formatBytes(prunedTotal)}` : undefined);
+		}
 
 		// Return modified messages (required for changes to take effect)
 		return { messages: filteredMessages };

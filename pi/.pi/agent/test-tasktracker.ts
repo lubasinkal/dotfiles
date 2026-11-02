@@ -106,6 +106,58 @@ ok("clear removes tasks.json", !existsSync(taskFile));
 r = await run({ action: "persist", persist: false });
 ok("persist can be disabled", d(r).persisted === false);
 
+// ── 12. /tasks panel: live state, refresh, close ───────────
+const snaps: any[] = [];
+await reconstruct();
+snaps.push(d(await run({ action: "add", text: "panel task one", priority: "high" })));
+snaps.push(d(await run({ action: "add", text: "panel task two" })));
+const branch = snaps.map((details) => ({ type: "message", message: { role: "toolResult", toolName: "task", details } }));
+
+const fakeTheme: any = new Proxy({}, { get: () => (first: any, second?: any) => (typeof first === "string" && typeof second === "string" ? second : String(first ?? "")) });
+let renders = 0;
+let closed = false;
+let component: any;
+const panelCtx: any = {
+	mode: "tui",
+	cwd: process.cwd(),
+	sessionManager: { getBranch: () => branch },
+	ui: {
+		notify() {},
+		custom: async (factory: any) => {
+			component = factory({ requestRender: () => renders++ }, fakeTheme, {}, () => { closed = true; });
+			return undefined;
+		},
+	},
+};
+const tasksCommand = commands.find((c: any) => c.name === "tasks");
+await tasksCommand.handler(undefined, panelCtx);
+ok("panel created", !!component);
+const first = component.render(80).join("\n");
+ok("panel shows branch tasks", /panel task one/.test(first) && /panel task two/.test(first), first.slice(0, 200));
+ok("panel shows counts", /0\/2 done/.test(first));
+
+// State changes after open must show up without closing the panel.
+await run({ action: "add", text: "added while open" });
+const second = component.render(80).join("\n");
+ok("panel picks up new tasks live", /added while open/.test(second), second.slice(0, 200));
+
+// r re-reads the branch (source of truth), dropping work the branch lacks.
+component.handleInput("r");
+const third = component.render(80).join("\n");
+ok("r refreshes from branch", /panel task one/.test(third) && !/added while open/.test(third), third.slice(0, 200));
+ok("r requests a render", renders > 0);
+
+component.handleInput("\u001b");
+ok("escape closes the panel", closed);
+
+// ── 13. task mutations must not rewrite the session history ───────
+const historyLen = branch[branch.length - 1].message.details.tasks.length;
+await reconstruct(branch as any[]);
+await run({ action: "add", text: "after reconstruct" });
+check("branch snapshot length unchanged", branch[branch.length - 1].message.details.tasks.length, historyLen);
+await run({ action: "clear" });
+check("clear leaves history intact", branch[branch.length - 1].message.details.tasks.length, historyLen);
+
 rmSync(home, { recursive: true, force: true });
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

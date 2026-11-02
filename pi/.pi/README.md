@@ -35,9 +35,8 @@ via a manual symlink (`~/.pi → ~/dotfiles/pi/.pi`), not stow.
 | `quality-gate/` | Post-op git diff scan (`.only`, `debugger`, `@ts-ignore`, `console.log`) | (event hook) |
 | `read-cap/` | Caps `read` output to 250 lines | (event hook) |
 | `subagent/` | Spawns separate `pi` processes; single/parallel/chain modes | `subagent` |
-| `tasktracker/` | Task list with priorities, notes, branch-aware state, optional cross-session `tasks.json` | `task`, `/tasks` |
-| `token-tools/` | Registers efficient primitives defined in `lib/` | `snippet`, `diff-hunks`, `code-index`, `files-changed`, `check` |
-| `ui/` | Footer status line (ctx%, tokens, cost, branch, model) | (event hook) |
+| `tasktracker/` | Task list with priorities, notes, branch-aware state, optional cross-session `tasks.json` | `task`, `/tasks` || `token-tools/` | Registers efficient primitives defined in `lib/` | `snippet`, `diff-hunks`, `code-index`, `files-changed`, `check` |
+| `ui/` | Footer status line: dir (branch), task counts, running bg jobs, tokens, ctx%, cost, model | (event hook) |
 | `atuin.ts` | Records pi's bash commands to Atuin history | (event hook) |
 
 Web search/fetch comes from the npm package `pi-web-access` (below), not a local extension.
@@ -62,7 +61,7 @@ Two mechanisms, kept separate:
 Run any of these with plain `node` (22+, type stripping) or `bun`:
 
 - `test-cmd-opt.ts` — cmd-opt lint/rewrite/cap checks.
-- `test-tasktracker.ts` — task add/list/sort/edit/errors, branch reconstruction, and tasks.json persistence.
+- `test-tasktracker.ts` — task add/list/sort/edit/errors, branch reconstruction, tasks.json persistence, the `/tasks` panel (live state, `r` refresh, close), and that mutations never rewrite session history.
 - `test-bg.ts` — background start/wait/output/stop/clean, exit codes, quoting, process-group kill, pid-reuse safety, on-disk status.
 - `test-git-guard.ts` — commit detection, secret/`.env`/debug blocking, `-a` handling, bypass, fail-open outside a repo.
 - `test-hooks.ts` — shared bootstrap; teaches node jiti's `./x.js` → `./x.ts` resolution.
@@ -81,6 +80,7 @@ All of them need `node_modules/` in this directory. `install.sh` symlinks it to
 - **No memory or skills installed yet** — `memory/` and `skills/` are the intended homes (both gitignored/absent). New-machine clones start without them.
 - **`tasks.json`** is written only when a task call sets `persist: true`; it is not in `.gitignore` (it lives outside the repo, under `~/.pi/agent/`).
 - **`bg` tasks outlive the session by design** — detached process groups keep running after pi exits. Stop servers/watchers explicitly (`bg stop`), and `bg clean` drops finished entries. Logs/meta live in `~/.pi/agent/bg/`.
+- **Footer work indicators** read from the branch (task counts) and from `~/.pi/agent/bg/` (running jobs, refreshed at most every 2s). The pruner publishes its own `✂` status only after it prunes.
 - **`node_modules/` (typecheck deps) is a gitignored symlink** — recreate it before `tsc --noEmit` works on a fresh clone.
 
 ## Bundled binaries
