@@ -6,6 +6,11 @@
 - Verify with the appropriate check and report the real result. Review the diff before handing off.
 - Be direct. Cite `file:line`.
 
+## Work in flight
+
+- Three or more steps: add them with `task` before starting, then mark each done as you go.
+- Anything that may run over ~60s (installs, full suites, builds, servers): `bg start`, poll with `bg wait`/`bg output`, `bg stop` when finished.
+
 ## Subagents
 
 `scout` recon · `planner` plan only · `worker` execute the plan · `reviewer` read-only review · `research` sourced external facts.

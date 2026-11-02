@@ -133,5 +133,19 @@ ok("capper leaves small output", res === undefined);
 	ok("two rewrites reported as applied", two.applied.length >= 2, String(two.applied.length));
 }
 
+// Long-running commands get nudged toward bg.
+{
+	const hinted = await lint("npm install", true);
+	ok("npm install hints bg", /bg start/.test(hinted), hinted);
+	const testRun = await lint("pnpm run test", true);
+	ok("pnpm run test hints bg", /bg start/.test(testRun), testRun);
+	const build = await lint("cargo build --release", true);
+	ok("cargo build hints bg", /bg start/.test(build), build);
+	const quick = await lint("ls -la", true);
+	ok("quick commands are not nudged", !/bg start/.test(quick), quick);
+	const grepQuick = await lint("git status --short", true);
+	ok("git status is not nudged", !/bg start/.test(grepQuick), grepQuick);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

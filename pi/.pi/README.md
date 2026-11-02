@@ -23,7 +23,7 @@ Prompt build order: base → `AGENTS.md` → tool snippets → guidelines → sk
 |---|---|---|
 | `ask-user/` | TUI multiple-choice picker | `ask_user` |
 | `bg/` | Detached background shell tasks; registry on disk so subagents see them | `bg` |
-| `cmd-opt/` | Lints, rewrites, blocks and caps bash commands | `lint-cmd`, `cmd-stats` |
+| `cmd-opt/` | Lints, rewrites, blocks and caps bash commands; nudges long runs toward `bg` | `lint-cmd`, `cmd-stats` |
 | `file-search/` | `fd` with truncation and a temp file for full output | `fd` |
 | `git-guard/` | Blocks `git commit` when secrets, `.env`/key files, `.only` or `debugger` are staged | (hook) |
 | `quality-gate/` | After a successful edit, warns about `.only`, `debugger`, `@ts-ignore`, `console.log` in added lines | (hook) |

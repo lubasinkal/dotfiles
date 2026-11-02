@@ -63,6 +63,13 @@ export const RULES: Rule[] = [
 
 	// ── hints (teach the cheaper equivalent via a trailing comment) ─────
 	{
+		id: "long-command",
+		severity: "hint",
+		re: /\b(?:npm|pnpm|yarn|bun)\s+(?:ci|install|i|add|test|run\s+(?:build|test|lint|dev|watch|start))\b|(?:^|[|;&]\s*)make\b|\bcargo\s+(?:build|test|check)\b|\bgo\s+(?:test|build)\b|\bpytest\b|\bdocker(?:-compose)?\s+(?:build|up)\b|\b(?:vitest|jest|playwright)\s+run\b|--watch\b/,
+		message: "for commands likely over ~60s (installs, suites, builds, servers) use bg start, then bg wait/bg output — and bg stop when done",
+		savings: 0,
+	},
+	{
 		id: "rg-bare",
 		severity: "hint",
 		re: /(?:^|[|;&]\s*)\brg\b|\brg\b[^\n]*\|\s*head\b/,
