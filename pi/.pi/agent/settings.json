@@ -5,16 +5,20 @@
   "defaultThinkingLevel": "high",
   "enableInstallTelemetry": false,
   "hideThinkingBlock": true,
-  "lastChangelogVersion": "1.4.0",
+  "lastChangelogVersion": "1.5.0",
   "terminal": {
     "showTerminalProgress": true
   },
   "theme": "system",
   "tuiMode": "fullscreen",
   "packages": [
-    "npm:pi-web-access"
+    "npm:pi-web-access",
+    "git:github.com/DietrichGebert/ponytail"
   ],
   "warnings": {
     "anthropicExtraUsage": false
+  },
+  "extensionChangelogVersions": {
+    "{\"source\":\"npm:pi-web-access\",\"scope\":\"user\"}": "0.46.0"
   }
 }
