@@ -9,7 +9,7 @@
  * Depends on: git.
  */
 
-import { Type } from "@earendil-works/pi-ai";
+import { Type } from "typebox";
 import { defineTool, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { DEFAULT_CAP, truncate, run, textResult } from "./shared.js";
 

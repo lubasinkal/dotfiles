@@ -2,7 +2,7 @@
  * Tool definitions for cmd-opt extension
  */
 
-import { Type } from "@earendil-works/pi-ai";
+import { Type } from "typebox";
 import { defineTool } from "@earendil-works/pi-coding-agent";
 import { lint, applyRewrites } from "./lint.js";
 import { textResult } from "./capper.js";

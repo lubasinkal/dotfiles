@@ -8,7 +8,7 @@
  * Depends on: ripgrep (`rg`) on PATH.
  */
 
-import { Type } from "@earendil-works/pi-ai";
+import { Type } from "typebox";
 import { defineTool, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { IGNORES, q, run, textResult } from "./shared.js";
 

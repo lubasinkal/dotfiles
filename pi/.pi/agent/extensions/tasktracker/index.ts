@@ -16,7 +16,8 @@
  * Install: ~/.pi/agent/extensions/tasktracker/index.ts, then /reload.
  */
 
-import { StringEnum, Type } from "@earendil-works/pi-ai";
+import { StringEnum } from "@earendil-works/pi-ai";
+import { Type } from "typebox";
 import type { ExtensionAPI, ExtensionContext, Theme } from "@earendil-works/pi-coding-agent";
 import { matchesKey, Text, truncateToWidth } from "@earendil-works/pi-tui";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";

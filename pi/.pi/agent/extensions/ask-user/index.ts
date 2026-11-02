@@ -19,7 +19,7 @@ import {
   visibleWidth,
   wrapTextWithAnsi,
 } from "@earendil-works/pi-tui";
-import { Type } from "@earendil-works/pi-ai";
+import { Type } from "typebox";
 
 const MIN_OPTIONS = 2;
 const MAX_OPTIONS = 5;

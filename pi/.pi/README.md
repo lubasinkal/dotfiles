@@ -31,6 +31,7 @@ via a manual symlink (`~/.pi → ~/dotfiles/pi/.pi`), not stow.
 | `cmd-opt/` | Bash lint/optimize/cap/block/rewrite engine | `lint-cmd`, `cmd-stats` |
 | `context-pruner/` | 3-tier token-budget context collapse | (event hook) |
 | `file-search/` | Wraps `fd` with formatting/truncation (content search lives in `snippet`) | `fd` |
+| `git-guard/` | Blocks `git commit` when secrets, `.env`/key files, `.only` or `debugger` are staged | (event hook) |
 | `quality-gate/` | Post-op git diff scan (`.only`, `debugger`, `@ts-ignore`, `console.log`) | (event hook) |
 | `read-cap/` | Caps `read` output to 250 lines | (event hook) |
 | `subagent/` | Spawns separate `pi` processes; single/parallel/chain modes | `subagent` |
@@ -58,15 +59,23 @@ Two mechanisms, kept separate:
 
 ## Tests
 
-- `test-cmd-opt.ts` — cmd-opt lint/rewrite/cap checks (needs bun: `bun run test-cmd-opt.ts`; plain node can't resolve its `./lint.js` imports).
-- `test-tasktracker.ts` — task add/list/sort/edit/errors, branch reconstruction, and tasks.json persistence (`node test-tasktracker.ts`).
-- `test-bg.ts` — background start/wait/output/stop/clean, exit codes, quoting, process-group kill, pid-reuse safety, on-disk status (`node test-bg.ts`).
+Run any of these with plain `node` (22+, type stripping) or `bun`:
 
-Both need `node_modules/` (the gitignored symlink to the global pi install) for the `@earendil-works/*` imports.
+- `test-cmd-opt.ts` — cmd-opt lint/rewrite/cap checks.
+- `test-tasktracker.ts` — task add/list/sort/edit/errors, branch reconstruction, and tasks.json persistence.
+- `test-bg.ts` — background start/wait/output/stop/clean, exit codes, quoting, process-group kill, pid-reuse safety, on-disk status.
+- `test-git-guard.ts` — commit detection, secret/`.env`/debug blocking, `-a` handling, bypass, fail-open outside a repo.
+- `test-hooks.ts` — shared bootstrap; teaches node jiti's `./x.js` → `./x.ts` resolution.
+
+All of them need `node_modules/` in this directory. `install.sh` symlinks it to
+`install/releases/<current-version>/node_modules`; without it the
+`@earendil-works/*` imports don't resolve.
 
 ## Caveats
 
 - **`quality-gate/`** has hardcoded patterns (no config file). Edit `extensions/quality-gate/index.ts` to customize.
+- **`git-guard/`** also hardcodes its patterns (secrets, `.env`/key files, `.only`, `debugger`). Bypass a session with `PI_GIT_GUARD=off`. It blocks only `git commit` through the bash tool — commits you make in another terminal are not covered.
+- **Tool schemas import `Type` from `typebox`**, not from `@earendil-works/pi-ai`. Pi 1.5.0's published `pi-ai` no longer re-exports `Type` (inside pi it still does), and importing from `typebox` keeps extensions loadable outside pi, which is what the test harness needs. `StringEnum` still comes from `pi-ai`.
 - **`lib/`** implements tools that `extensions/token-tools/` registers (plus `piEnv()`, shared by `file-search/`). Split is intentional (impl vs. registration) but undocumented in code.
 - **No `AGENTS.override.md`** anywhere — if a child repo needs to shadow inherited rules, add one at the repo root.
 - **No memory or skills installed yet** — `memory/` and `skills/` are the intended homes (both gitignored/absent). New-machine clones start without them.

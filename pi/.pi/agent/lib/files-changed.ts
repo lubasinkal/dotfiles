@@ -8,7 +8,7 @@
  * Depends on: git.
  */
 
-import { Type } from "@earendil-works/pi-ai";
+import { Type } from "typebox";
 import { defineTool, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { run, textResult } from "./shared.js";
 
