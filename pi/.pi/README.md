@@ -27,6 +27,7 @@ via a manual symlink (`~/.pi → ~/dotfiles/pi/.pi`), not stow.
 | Dir | Purpose | Tools |
 |---|---|---|
 | `ask-user/` | TUI multi-choice picker | `ask_user` |
+| `bg/` | Detached background shell tasks with on-disk registry (shared with subagents) | `bg` |
 | `cmd-opt/` | Bash lint/optimize/cap/block/rewrite engine | `lint-cmd`, `cmd-stats` |
 | `context-pruner/` | 3-tier token-budget context collapse | (event hook) |
 | `file-search/` | Wraps `fd` with formatting/truncation (content search lives in `snippet`) | `fd` |
@@ -59,6 +60,7 @@ Two mechanisms, kept separate:
 
 - `test-cmd-opt.ts` — cmd-opt lint/rewrite/cap checks (needs bun: `bun run test-cmd-opt.ts`; plain node can't resolve its `./lint.js` imports).
 - `test-tasktracker.ts` — task add/list/sort/edit/errors, branch reconstruction, and tasks.json persistence (`node test-tasktracker.ts`).
+- `test-bg.ts` — background start/wait/output/stop/clean, exit codes, quoting, process-group kill, pid-reuse safety, on-disk status (`node test-bg.ts`).
 
 Both need `node_modules/` (the gitignored symlink to the global pi install) for the `@earendil-works/*` imports.
 
@@ -69,6 +71,7 @@ Both need `node_modules/` (the gitignored symlink to the global pi install) for 
 - **No `AGENTS.override.md`** anywhere — if a child repo needs to shadow inherited rules, add one at the repo root.
 - **No memory or skills installed yet** — `memory/` and `skills/` are the intended homes (both gitignored/absent). New-machine clones start without them.
 - **`tasks.json`** is written only when a task call sets `persist: true`; it is not in `.gitignore` (it lives outside the repo, under `~/.pi/agent/`).
+- **`bg` tasks outlive the session by design** — detached process groups keep running after pi exits. Stop servers/watchers explicitly (`bg stop`), and `bg clean` drops finished entries. Logs/meta live in `~/.pi/agent/bg/`.
 - **`node_modules/` (typecheck deps) is a gitignored symlink** — recreate it before `tsc --noEmit` works on a fresh clone.
 
 ## Bundled binaries
