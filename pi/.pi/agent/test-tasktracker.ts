@@ -167,6 +167,29 @@ check("branch snapshot length unchanged", branch[branch.length - 1].message.deta
 await run({ action: "clear" });
 check("clear leaves history intact", branch[branch.length - 1].message.details.tasks.length, historyLen);
 
+// ── 15. open tasks are re-surfaced to the model ──────────────────
+ok("start hook registered", !!handlers.before_agent_start);
+ok("settle hook registered", !!handlers.agent_before_settle);
+const start = () => handlers.before_agent_start[0]({ messageType: "user", prompt: "hi" }, {});
+const settle = () => handlers.agent_before_settle[0]({ entries: [], continue: false }, {});
+
+await reconstruct();
+ok("no reminder with an empty list", (await start()) === undefined);
+await run({ action: "add", text: "open work" });
+const reminder = await start();
+ok("open task is injected at run start", /#1 open work/.test(reminder?.message?.content ?? ""), JSON.stringify(reminder));
+ok("reminder is not shown in the TUI", reminder?.message?.display === false);
+ok("custom run gets no reminder", (await handlers.before_agent_start[0]({ messageType: "custom" }, {})) === undefined);
+
+const nudge = await settle();
+ok("settle nudges once", nudge?.continue === true && /Still open \(1\)/.test(nudge.entries[0].content), JSON.stringify(nudge));
+ok("second settle stays quiet", (await settle()) === undefined);
+
+await start();
+await run({ action: "done", id: 1 });
+ok("no nudge when nothing is open", (await settle()) === undefined);
+ok("done task is not injected", (await start()) === undefined);
+
 rmSync(home, { recursive: true, force: true });
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

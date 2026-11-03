@@ -258,6 +258,46 @@ export default function tasktracker(pi: ExtensionAPI) {
 	pi.on("session_start", async (_event, ctx) => reconstruct(ctx));
 	pi.on("session_tree", async (_event, ctx) => reconstruct(ctx));
 
+	const openTasks = () => sorted(tasks.filter((t) => !t.done));
+	const openList = () => openTasks().map((t) => `#${t.id} ${t.text}`).join("; ");
+
+	// The model only sees the list in old tool results, so a fresh prompt, a
+	// compaction, or a long run loses it. Remind it once per user prompt.
+	let nudged = false;
+	pi.on("before_agent_start", async (event) => {
+		nudged = false;
+		if (event.messageType !== "user") return;
+		const open = openTasks();
+		if (open.length === 0) return;
+		return {
+			message: {
+				customType: "task-reminder",
+				content: `Open tasks (${open.length}): ${openList()}. Work them in order and mark each done with the task tool as it completes.`,
+				display: false,
+			},
+		};
+	});
+
+	// A run that ends with open tasks gets exactly one nudge, so a forgotten
+	// `done` surfaces before the reply instead of going unnoticed.
+	pi.on("agent_before_settle", async (event) => {
+		const open = openTasks();
+		if (nudged || open.length === 0) return;
+		nudged = true;
+		return {
+			entries: [
+				...event.entries,
+				{
+					type: "custom_message" as const,
+					customType: "task-reminder",
+					content: `Still open (${open.length}): ${openList()}. Mark finished ones done with the task tool, or say why each is still open.`,
+					display: false,
+				},
+			],
+			continue: true,
+		};
+	});
+
 	pi.registerTool({
 		name: "task",
 		label: "Task",
@@ -267,6 +307,8 @@ export default function tasktracker(pi: ExtensionAPI) {
 		promptGuidelines: [
 			"For work with three or more steps, add the steps with `task` before starting and mark each done as it completes.",
 			"Keep task text short and action-shaped; put detail in `note` via edit.",
+			"Mark a task done as soon as its work is finished, in the same turn, before moving on.",
+			"Do not clear a list that still has open tasks unless the user dropped that work; mark the finished ones done instead.",
 			"Use persist: true when the list should survive into a new session.",
 		],
 		parameters: TaskParams,
