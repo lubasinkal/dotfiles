@@ -1,6 +1,6 @@
 {
   "collapseChangelog": true,
-  "defaultModel": "mimo-v2.6-flash",
+  "defaultModel": "deepseek-v4.1-flash",
   "defaultProvider": "opencode-go",
   "defaultThinkingLevel": "high",
   "enableInstallTelemetry": false,
