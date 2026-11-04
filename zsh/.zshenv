@@ -6,6 +6,7 @@ _zsh_path_prepend() { case ":$PATH:" in *":$1:"*) ;; *) export PATH="$1:$PATH" ;
 
 _zsh_path_prepend "$HOME/.local/bin"
 _zsh_path_prepend "$HOME/.bun/bin"
+_zsh_path_prepend "$HOME/.cargo/bin"
 _zsh_path_prepend "$HOME/.local/share/pi-node/node-v22.23.2-linux-x64/bin"
 
 export QT_QPA_PLATFORMTHEME=kvantum
