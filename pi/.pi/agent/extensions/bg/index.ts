@@ -233,7 +233,7 @@ export default function bg(pi: ExtensionAPI) {
 		promptSnippet: "bg: background shell tasks — start/list/output/wait/stop for slow commands",
 		promptGuidelines: [
 			"Use bg instead of bash for commands likely to take more than ~60 seconds: installs, full test suites, large builds, watch modes, dev servers.",
-			"After starting, poll with bg wait (short timeout) or bg output instead of blocking; keep working while it runs.",
+			"bg start returns at once: keep doing independent work and check progress with bg output. Use bg wait only when nothing else is left to do.",
 			"Always bg stop servers and watchers when done — they outlive the session by design.",
 			"bg task state is on disk under ~/.pi/agent/bg/, so a subagent can bg list/output the parent's tasks.",
 		],
@@ -288,7 +288,7 @@ export default function bg(pi: ExtensionAPI) {
 					}
 
 					return result(
-						`Started ${id} (pid ${meta.pid}) in ${cwd}\ncommand: ${command}\nlog: ${meta.logPath}\nnext: bg output ${id} · bg wait ${id} · bg stop ${id}`,
+						`Started ${id} (pid ${meta.pid}) in ${cwd}\ncommand: ${command}\nlog: ${meta.logPath}\nnext: keep working · bg output ${id} to check · bg stop ${id}`,
 						{ action: "start", taskId: id, state: "running", elapsedMs: 0, logPath: meta.logPath },
 					);
 				}

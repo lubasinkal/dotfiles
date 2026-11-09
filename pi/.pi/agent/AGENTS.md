@@ -9,7 +9,7 @@
 ## Work in flight
 
 - Three or more steps: add them with `task` before starting, then mark each done as you go.
-- Anything that may run over ~60s (installs, full suites, builds, servers): `bg start`, poll with `bg wait`/`bg output`, `bg stop` when finished.
+- Anything that may run over ~60s (installs, full suites, builds, servers): `bg start`, keep working, check with `bg output`; `bg wait` only when nothing else is left; `bg stop` when finished.
 
 ## Subagents
 
