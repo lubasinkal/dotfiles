@@ -21,6 +21,7 @@ export const IGNORES = [
 	"!**/vendor/**",
 	"!**/target/**",
 	"!**/.venv/**",
+	"!**/.cache/**",
 ];
 
 /** Shell-safe single quoting. */
@@ -80,8 +81,12 @@ export function run(
 		return truncate(raw, maxBytes);
 	} catch (err: any) {
 		const stderr = err?.stderr?.toString?.() ?? "";
-		const code = err?.status ?? 1;
-		return `[exit ${code}] ${truncate(stderr, maxBytes)}`;
+		// No status means the shell/spawn itself failed (missing cwd, no such
+		// binary) — say so, instead of letting callers read it as "no matches".
+		const code = err?.status ?? "spawn";
+		const noStatus = err?.status === undefined || err?.status === null;
+		const why = noStatus ? `${err?.code ?? "error"}: ${err?.message ?? "spawn failed"}` : stderr;
+		return `[exit ${code}] ${truncate(why, maxBytes)}`;
 	}
 }
 

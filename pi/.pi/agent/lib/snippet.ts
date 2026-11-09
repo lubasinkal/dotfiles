@@ -36,23 +36,29 @@ export const snippetTool = defineTool({
 		"If you know the symbol name and only need its definition, prefer code-index (name → file:line).",
 		"Treat hits as anchors: follow up with read only when the match line isn't enough to answer the question.",
 		"Narrow with path= and maxResults= instead of post-filtering large result sets.",
+		"Hidden files are searched by default (.git and node_modules are excluded); pass hidden: false to skip dot directories.",
 	],
 	parameters: Type.Object({
 		query: Type.String({ description: "Regex or substring to search (ripgrep syntax, smart case)" }),
 		path: Type.Optional(Type.String({ description: "Directory to search (default: current dir)" })),
 		maxResults: Type.Optional(Type.Number({ description: "Max matches returned (default 30)", default: 30 })),
 		maxLineLength: Type.Optional(Type.Number({ description: "Max chars per match line (default 120)", default: 120 })),
-		caseSensitive: Type.Optional(Type.Boolean({ description: "Force case-sensitive (default smart case)", default: false })),
+		caseSensitive: Type.Optional(Type.Boolean({ description: "true = case-sensitive, false = ignore case (default: smart case)" })),
+		hidden: Type.Optional(Type.Boolean({ description: "Search hidden files and directories (default true; .git, node_modules, caches excluded)" })),
 	}),
 	async execute(_id, params, _sig, _onUpdate, ctx) {
 		const searchDir = params.path ?? ctx.cwd;
 		const maxResults = Math.max(1, Math.min(100, params.maxResults ?? 30));
 		const maxLineLen = Math.max(40, Math.min(400, params.maxLineLength ?? 120));
-		const rgArgs = ["--no-heading", "--line-number", "--color=never", "--max-count=40"];
+		// Hidden on by default: a dot directory is where the config often lives, and
+		// rg skipping it silently returns "0 matches" — the IGNORES globs keep .git
+		// and caches out, so the walk stays cheap.
+		const hiddenArgs = params.hidden === false ? [] : ["--hidden"];
+		const rgArgs = ["--no-heading", "--line-number", "--color=never", "--max-count=40", ...hiddenArgs];
 
 		const ignoreArgs = IGNORES.flatMap((ig) => ["--glob", ig]);
 
-		const caseFlag = params.caseSensitive === false ? [] : params.caseSensitive ? ["--case-sensitive"] : ["--smart-case"];
+		const caseFlag = params.caseSensitive === undefined ? ["--smart-case"] : params.caseSensitive ? ["--case-sensitive"] : ["--ignore-case"];
 
 		const args = [...rgArgs, ...ignoreArgs, ...caseFlag, "-e", params.query, "."];
 		const raw = run(`rg ${args.map(q).join(" ")}`, searchDir, 15_000, 200_000);

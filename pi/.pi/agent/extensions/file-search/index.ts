@@ -107,7 +107,12 @@ const FD_TYPE_MAP: Record<string, string> = {
 
 function buildFdArgs(params: Record<string, unknown>): string[] {
   const args = ["--color=never"];
-  if (params.hidden) args.push("--hidden");
+  // Hidden on by default: in this dotfiles repo every config file lives under a
+  // dot directory, and silently skipping it looks identical to "no such file".
+  const hidden = params.hidden !== false;
+  if (hidden) {
+    args.push("--hidden", "--exclude", ".git", "--exclude", "node_modules", "--exclude", ".cache");
+  }
   if (params.glob) args.push("--glob");
   if (params.type && typeof params.type === "string") {
     const flag = FD_TYPE_MAP[params.type];
@@ -254,7 +259,7 @@ export default function fileSearch(pi: ExtensionAPI) {
       hidden: Type.Optional(
         Type.Boolean({
           description:
-            "Include hidden files and directories. Defaults to false.",
+            "Include hidden files and directories. Defaults to true (.git, node_modules, .cache excluded); pass false to skip dot directories.",
         }),
       ),
       max_depth: Type.Optional(
