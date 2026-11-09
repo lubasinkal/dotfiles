@@ -24,9 +24,9 @@ export const IGNORES = [
 	"!**/.cache/**",
 ];
 
-/** Shell-safe single quoting. */
+/** Shell-safe single quoting. String() so a stray non-string cannot throw. */
 export function q(s: string): string {
-	return "'" + s.replace(/'/g, `'\\''`) + "'";
+	return "'" + String(s).replace(/'/g, `'\\''`) + "'";
 }
 
 /**

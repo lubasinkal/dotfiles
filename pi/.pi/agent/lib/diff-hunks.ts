@@ -13,6 +13,15 @@ import { Type } from "typebox";
 import { defineTool } from "@earendil-works/pi-coding-agent";
 import { DEFAULT_CAP, q, truncate, run, textResult } from "./shared.js";
 
+/**
+ * Pathspecs are declared as string[], but a caller can send a bare string or a
+ * nested array — flatten and stringify so `q()` never gets a non-string.
+ */
+function pathspecs(raw: unknown): string {
+	const list = (Array.isArray(raw) ? raw.flat(2) : raw == null ? [] : [raw]).map(String);
+	return list.length ? `-- ${list.map(q).join(" ")}` : "";
+}
+
 export const diffHunksTool = defineTool({
 	name: "diff-hunks",
 	label: "Diff hunks",
@@ -32,7 +41,7 @@ export const diffHunksTool = defineTool({
 	async execute(_id, params, _sig, _onUpdate, ctx) {
 		const contextLines = Math.max(0, Math.min(10, params.context ?? 3));
 		const diffCmd = params.staged ? "git diff --cached" : "git diff";
-		const pathArgs = (params.paths ?? []).length ? `-- ${(params.paths ?? []).map(q).join(" ")}` : "";
+		const pathArgs = pathspecs(params.paths);
 		const cmd = `${diffCmd} -U${contextLines} --no-color ${pathArgs}`.trim();
 		const raw = run(cmd, ctx.cwd, 15_000, 200_000);
 

@@ -35,6 +35,13 @@ const root = mkdtempSync(join(tmpdir(), "pi-lib-"));
 	const scoped = (await run([nasty])).content[0].text;
 	ok("diff-hunks handles a hostile pathspec", scoped.includes("two") && !scoped.startsWith("[exit"), scoped.slice(0, 200));
 	ok("diff-hunks did not delete anything", execFileSync("ls", [repo], { encoding: "utf8" }).includes("we ird"), "file vanished");
+
+	// The harness has handed the tool a nested / non-string pathspec before, which
+	// threw "s.replace is not a function" mid-session; both shapes must work.
+	const nested = (await diffHunksTool.execute("id", { paths: [[nasty]] } as any, undefined, undefined, { cwd: repo })).content[0].text;
+	ok("diff-hunks tolerates a nested pathspec", nested.includes("two") && !nested.startsWith("[exit"), nested.slice(0, 200));
+	const bare = (await diffHunksTool.execute("id", { paths: nasty } as any, undefined, undefined, { cwd: repo })).content[0].text;
+	ok("diff-hunks tolerates a bare string pathspec", bare.includes("two") && !bare.startsWith("[exit"), bare.slice(0, 200));
 }
 
 // ── check: eslint's stylish output must be parsed, not dumped raw ─────
