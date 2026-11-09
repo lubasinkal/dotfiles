@@ -9,7 +9,12 @@ const home = mkdtempSync(join(tmpdir(), "pi-bghome-"));
 process.env.HOME = home;
 
 const tools: any[] = [];
-const pi = { registerTool(t: any) { tools.push(t); }, registerCommand() {}, on() {} };
+const commands: any[] = [];
+const pi = {
+	registerTool(t: any) { tools.push(t); },
+	registerCommand(name: string, cmd: any) { commands.push({ name, ...cmd }); },
+	on() {},
+};
 
 const mod = await import(join(process.cwd(), "extensions", "bg", "index.ts"));
 mod.default(pi);
@@ -162,6 +167,82 @@ ok("clean removed finished", /Removed \d+ finished/.test(text(r)), text(r));
 ok("clean kept the running task", existsSync(join(home, ".pi", "agent", "bg", `${idKeep}.json`)));
 ok("clean removed lost task", !existsSync(join(home, ".pi", "agent", "bg", `${lostId}.json`)));
 await run({ action: "stop", id: idKeep });
+
+// ── 13. /bg command mirrors list and output ───────────────────────
+const notified: string[] = [];
+const ctx = { ui: { notify: (msg: string) => notified.push(msg) } };
+const cmd = commands.find((c) => c.name === "bg");
+ok("/bg command registered", !!cmd);
+r = await run({ action: "start", command: "echo via-command; exit 3" });
+const idCmd = d(r).taskId;
+await run({ action: "wait", id: idCmd, timeout: 20 });
+await cmd.handler("", ctx);
+ok("/bg with no args lists tasks", String(notified.at(-1)).includes(`${idCmd}  exited 3`), notified.at(-1));
+await cmd.handler(idCmd.slice(0, 4), ctx);
+ok("/bg <id> shows output", String(notified.at(-1)).includes("via-command") && String(notified.at(-1)).includes("exited 3"), notified.at(-1));
+await cmd.handler("deadbeef", ctx);
+ok("/bg unknown id reports", String(notified.at(-1)).includes("No background task"), notified.at(-1));
+
+// ── 14. /bg panel renders, selects, and closes ────────────────────
+let panel: any = undefined;
+let panelClosed = false;
+const theme = { fg: (_color: string, s: string) => s };
+const tuiCtx = {
+	mode: "tui",
+	ui: {
+		custom: async (fn: any) => {
+			panel = fn({ requestRender() {} }, theme, {}, () => {
+				panelClosed = true;
+			});
+		},
+		notify() {},
+	},
+};
+await cmd.handler("", tuiCtx);
+const frame = panel.render(100).join("\n");
+ok("/bg panel lists tasks", frame.includes("Background tasks") && frame.includes(idCmd), frame.slice(0, 300));
+ok("/bg panel shows selected log", frame.includes("via-command") && frame.includes("log ──"), frame);
+ok("/bg panel marks the selection", frame.includes("▸"), frame);
+panel.handleInput("j");
+ok("/bg panel survives a keypress", panel.render(100).join("\n").includes("Background tasks"));
+panel.handleInput("\u001b");
+ok("/bg panel closes on escape", panelClosed);
+
+// ── 15. finished tasks older than a day are pruned on start ───────
+const bgDir = join(home, ".pi", "agent", "bg");
+const fake = (id: string, ageMs: number, code = "0") => {
+	const meta = { id, command: `fake ${id}`, cwd: home, pid: 999999, startedAt: Date.now() - ageMs, logPath: join(bgDir, `${id}.log`), exitPath: join(bgDir, `${id}.exit`), ownerPid: process.pid };
+	writeFileSync(join(bgDir, `${id}.json`), JSON.stringify(meta));
+	writeFileSync(join(bgDir, `${id}.log`), `log of ${id}\n`);
+	writeFileSync(join(bgDir, `${id}.exit`), code);
+};
+const DAY = 24 * 60 * 60 * 1000;
+fake("oldfinish", 25 * 60 * 60 * 1000);
+fake("freshfinish", 60 * 60 * 1000);
+r = await run({ action: "start", command: "echo prune-check" });
+const idPrune = d(r).taskId;
+await run({ action: "wait", id: idPrune, timeout: 20 });
+ok("old finished task pruned", !existsSync(join(bgDir, "oldfinish.json")) && !existsSync(join(bgDir, "oldfinish.log")), text(r));
+ok("prune is reported once", /pruned 1 finished task/.test(text(r)), text(r));
+ok("fresh finished task kept", existsSync(join(bgDir, "freshfinish.json")), text(r));
+
+// an old task that is still running is never pruned
+r = await run({ action: "start", command: "sleep 300" });
+const idOldRunning = d(r).taskId;
+const oldRunningPath = join(bgDir, `${idOldRunning}.json`);
+const oldRunningMeta = JSON.parse(readFileSync(oldRunningPath, "utf8"));
+oldRunningMeta.startedAt = Date.now() - 3 * DAY;
+writeFileSync(oldRunningPath, JSON.stringify(oldRunningMeta));
+r = await run({ action: "start", command: "echo after-prune" });
+await run({ action: "wait", id: d(r).taskId, timeout: 20 });
+ok("old running task not pruned", existsSync(oldRunningPath), text(r));
+
+// ── 16. the cap never hides a running task ────────────────────────
+for (let i = 0; i < 25; i++) fake(`pad${String(i).padStart(4, "0")}`, 1000 + i);
+r = await run({ action: "list" });
+ok("running task survives the 20 cap", text(r).includes(`${idOldRunning}  running`), text(r).split("\n")[0]);
+ok("list stays capped", text(r).split("\n").length <= 21, String(text(r).split("\n").length));
+await run({ action: "stop", id: idOldRunning });
 
 rmSync(home, { recursive: true, force: true });
 console.log(`\n${pass} passed, ${fail} failed`);

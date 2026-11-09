@@ -28,14 +28,15 @@ import { join } from "node:path";
 import { spawn } from "node:child_process";
 import { StringEnum } from "@earendil-works/pi-ai";
 import { Type } from "typebox";
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { Text } from "@earendil-works/pi-tui";
+import type { ExtensionAPI, Theme } from "@earendil-works/pi-coding-agent";
+import { Key, matchesKey, Text, truncateToWidth } from "@earendil-works/pi-tui";
 import { piEnv } from "../../lib/shared.js";
 
 // ── Storage ─────────────────────────────────────────────────────────────
 
 const BG_DIR = join(homedir(), ".pi", "agent", "bg");
 const MAX_LIST = 20;
+const PRUNE_AGE_MS = 24 * 60 * 60 * 1000;
 const TAIL_BYTES = 16_384;
 const WAIT_POLL_MS = 150;
 const STOP_GRACE_MS = 3_000;
@@ -84,6 +85,40 @@ function allMetas(): Meta[] {
 		if (meta) metas.push(meta);
 	}
 	return metas.sort((a, b) => b.startedAt - a.startedAt);
+}
+
+/** Drop a task's registry files (json, log, exit code). */
+function dropTask(meta: Meta): void {
+	for (const path of [metaPath(meta.id), meta.logPath, meta.exitPath]) {
+		try {
+			rmSync(path, { force: true });
+		} catch {
+			// best effort
+		}
+	}
+}
+
+/**
+ * Finished tasks older than a day are noise: drop them so the registry cannot
+ * grow forever. Running tasks are never pruned, however old they are.
+ */
+function pruneFinished(): number {
+	let removed = 0;
+	for (const meta of allMetas()) {
+		if (Date.now() - meta.startedAt < PRUNE_AGE_MS) continue;
+		if (statusOf(meta).state === "running") continue;
+		dropTask(meta);
+		removed++;
+	}
+	return removed;
+}
+
+/** Running first so the cap can never hide a live task, then newest first. */
+function orderedMetas(limit: number): Meta[] {
+	const running: Meta[] = [];
+	const finished: Meta[] = [];
+	for (const meta of allMetas()) (statusOf(meta).state === "running" ? running : finished).push(meta);
+	return [...running, ...finished].slice(0, limit);
 }
 
 // ── Status ──────────────────────────────────────────────────────────────
@@ -222,6 +257,94 @@ function requireMeta(id: string | undefined): Meta | string {
 	return meta ?? `no background task '${id}'`;
 }
 
+function listText(metas: Meta[]): string {
+	if (metas.length === 0) return "No background tasks";
+	const rows = metas.map((meta) => {
+		const status = statusOf(meta);
+		return `${meta.id}  ${describe(status).padEnd(26)}  ${truncate(meta.command, 70)}  (${meta.cwd})`;
+	});
+	const running = metas.filter((m) => statusOf(m).state === "running").length;
+	return `${metas.length} task(s), ${running} running\n${rows.join("\n")}`;
+}
+
+function outputText(meta: Meta, lines: number): string {
+	const status = statusOf(meta);
+	const text = lastLines(readTail(meta.logPath, TAIL_BYTES), lines);
+	return `${meta.id} ${describe(status)} · ${truncate(meta.command, 80)}\n${text || "(no output yet)"}`;
+}
+
+function stateColor(status: Status): "success" | "warning" | "error" | "dim" {
+	if (status.state === "running") return "success";
+	if (status.state === "exited") return status.code === 0 ? "dim" : "warning";
+	return "error";
+}
+
+// ── Panel ───────────────────────────────────────────────────────────────
+
+/** Live view of the registry: pick a task with ↑↓, read its log tail. */
+class BgPanel {
+	private cursor: number;
+	private theme: Theme;
+	private onClose: () => void;
+	private requestRender: () => void;
+
+	constructor(options: { theme: Theme; cursor: number; onClose: () => void; requestRender: () => void }) {
+		this.theme = options.theme;
+		this.cursor = options.cursor;
+		this.onClose = options.onClose;
+		this.requestRender = options.requestRender;
+	}
+
+	handleInput(data: string): void {
+		if (matchesKey(data, Key.escape) || matchesKey(data, Key.ctrl("c")) || data === "q") {
+			this.onClose();
+			return;
+		}
+		const last = Math.max(0, orderedMetas(MAX_LIST).length - 1);
+		if (matchesKey(data, Key.up) || data === "k") this.cursor = Math.max(0, this.cursor - 1);
+		else if (matchesKey(data, Key.down) || data === "j") this.cursor = Math.min(last, this.cursor + 1);
+		this.requestRender();
+	}
+
+	render(width: number): string[] {
+		const th = this.theme;
+		const metas = orderedMetas(MAX_LIST);
+		const cursor = Math.min(this.cursor, Math.max(0, metas.length - 1));
+		const running = metas.filter((m) => statusOf(m).state === "running").length;
+		const lines = [
+			"",
+			truncateToWidth(th.fg("borderMuted", "───") + th.fg("accent", " Background tasks ") + th.fg("borderMuted", "─".repeat(Math.max(0, width - 21))), width),
+			"",
+		];
+
+		if (metas.length === 0) {
+			lines.push(truncateToWidth(`  ${th.fg("dim", "No background tasks.")}`, width));
+		} else {
+			lines.push(truncateToWidth(`  ${th.fg("muted", `${metas.length} task(s), ${running} running`)}`, width), "");
+			metas.forEach((meta, i) => {
+				const selected = i === cursor;
+				const status = statusOf(meta);
+				const mark = selected ? th.fg("accent", "▸") : " ";
+				const id = th.fg(selected ? "accent" : "text", meta.id);
+				const state = th.fg(stateColor(status), describe(status).padEnd(26));
+				const cmd = truncate(meta.command, Math.max(10, width - 56));
+				lines.push(truncateToWidth(`  ${mark} ${id}  ${state}  ${th.fg("dim", cmd)}`, width));
+			});
+
+			const selected = metas[cursor];
+			if (selected) {
+				lines.push("", truncateToWidth(`  ${th.fg("borderMuted", `── ${selected.id} log ──`)}`, width));
+				const log = lastLines(readTail(selected.logPath, TAIL_BYTES), 8);
+				if (log) for (const line of log.split("\n")) lines.push(truncateToWidth(`  ${th.fg("dim", line)}`, width));
+				else lines.push(truncateToWidth(`  ${th.fg("dim", "(no output yet)")}`, width));
+			}
+		}
+
+		lines.push("", truncateToWidth(`  ${th.fg("dim", "↑↓ select · q close")}`, width), "");
+		return lines;
+	}
+}
+
 // ── Extension ───────────────────────────────────────────────────────────
 
 export default function bg(pi: ExtensionAPI) {
@@ -244,6 +367,7 @@ export default function bg(pi: ExtensionAPI) {
 				case "start": {
 					const command = params.command?.trim();
 					if (!command) return fail("command required for start", { action: "start" });
+					const pruned = pruneFinished();
 
 					const id = randomUUID().slice(0, 8);
 					const cwd = params.cwd ?? process.cwd();
@@ -288,21 +412,15 @@ export default function bg(pi: ExtensionAPI) {
 					}
 
 					return result(
-						`Started ${id} (pid ${meta.pid}) in ${cwd}\ncommand: ${command}\nlog: ${meta.logPath}\nnext: keep working · bg output ${id} to check · bg stop ${id}`,
+						`Started ${id} (pid ${meta.pid}) in ${cwd}\ncommand: ${command}\nlog: ${meta.logPath}\nnext: keep working · bg output ${id} to check · bg stop ${id}` +
+							(pruned ? `\npruned ${pruned} finished task(s) older than 24h` : ""),
 						{ action: "start", taskId: id, state: "running", elapsedMs: 0, logPath: meta.logPath },
 					);
 				}
 
 				case "list": {
-					const metas = allMetas().slice(0, MAX_LIST);
-					if (metas.length === 0) return result("No background tasks", { action: "list" });
-					const rows = metas.map((meta) => {
-						const status = statusOf(meta);
-						return `${meta.id}  ${describe(status).padEnd(26)}  ${truncate(meta.command, 70)}  (${meta.cwd})`;
-					});
-					const running = metas.filter((m) => statusOf(m).state === "running").length;
-					const header = `${metas.length} task(s), ${running} running`;
-					return result(`${header}\n${rows.join("\n")}`, { action: "list", taskId: metas[0]?.id });
+					const metas = orderedMetas(MAX_LIST);
+					return result(listText(metas), { action: "list", taskId: metas[0]?.id });
 				}
 
 				case "output": {
@@ -310,11 +428,13 @@ export default function bg(pi: ExtensionAPI) {
 					if (typeof meta === "string") return fail(meta, { action: "output" });
 					const status = statusOf(meta);
 					const lines = Math.max(1, Math.min(500, params.lines ?? 40));
-					const text = lastLines(readTail(meta.logPath, TAIL_BYTES), lines);
-					return result(
-						`${meta.id} ${describe(status)} · ${truncate(meta.command, 80)}\n${text || "(no output yet)"}`,
-						{ action: "output", taskId: meta.id, state: status.state, code: status.code, elapsedMs: status.elapsedMs },
-					);
+					return result(outputText(meta, lines), {
+						action: "output",
+						taskId: meta.id,
+						state: status.state,
+						code: status.code,
+						elapsedMs: status.elapsedMs,
+					});
 				}
 
 				case "wait": {
@@ -362,13 +482,7 @@ export default function bg(pi: ExtensionAPI) {
 					const removed: string[] = [];
 					for (const meta of allMetas()) {
 						if (statusOf(meta).state === "running") continue;
-						for (const path of [metaPath(meta.id), meta.logPath, meta.exitPath]) {
-							try {
-								rmSync(path, { force: true });
-							} catch {
-								// best effort
-							}
-						}
+						dropTask(meta);
 						removed.push(meta.id);
 					}
 					return result(removed.length ? `Removed ${removed.length} finished task(s): ${removed.join(", ")}` : "Nothing to clean (all tasks still running)", {
@@ -394,6 +508,39 @@ export default function bg(pi: ExtensionAPI) {
 			const first = result.content[0];
 			const text = first?.type === "text" ? first.text : "";
 			return new Text(text.split("\n")[0] ?? "", 0, 0);
+		},
+	});
+
+	pi.registerCommand("bg", {
+		description: "Background tasks: /bg opens a live panel, /bg <id> jumps to that task",
+		handler: async (args, ctx) => {
+			const id = args.trim().split(/\s+/)[0] ?? "";
+			const metas = orderedMetas(MAX_LIST);
+			const found = id ? metas.find((m) => m.id.startsWith(id)) : undefined;
+			if (id && !found) {
+				ctx.ui.notify(`No background task matching '${id}'`, "error");
+				return;
+			}
+			if (ctx.mode !== "tui") {
+				ctx.ui.notify(found ? outputText(found, 40) : listText(metas), "info");
+				return;
+			}
+			const cursor = found ? Math.max(0, metas.indexOf(found)) : 0;
+			await ctx.ui.custom<void>((tui, theme, _kb, done) => {
+				// States change under the panel, so re-render on a tick; the panel
+				// re-reads the registry every frame instead of caching a snapshot.
+				// shortcut: cleared in onClose, which is the only close path we handle.
+				const timer = setInterval(() => tui.requestRender(), 1000);
+				return new BgPanel({
+					theme,
+					cursor,
+					onClose: () => {
+						clearInterval(timer);
+						done();
+					},
+					requestRender: () => tui.requestRender(),
+				});
+			});
 		},
 	});
 }
