@@ -222,6 +222,31 @@ function killGroup(pid: number, signal: NodeJS.Signals): void {
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/**
+ * SIGTERM the task's process group, SIGKILL whatever survives the grace period,
+ * then record an exit code: the wrapper dies before it can write one, and
+ * without it the task reads as "lost" forever.
+ */
+async function stopTask(meta: Meta): Promise<{ ok: boolean; text: string }> {
+	if (!ownsPid(meta)) return { ok: false, text: `${meta.id}: pid ${meta.pid} no longer looks like this task; not killing it` };
+
+	killGroup(meta.pid, "SIGTERM");
+	const deadline = Date.now() + STOP_GRACE_MS;
+	while (isAlive(meta.pid) && Date.now() < deadline) await sleep(WAIT_POLL_MS);
+	if (isAlive(meta.pid)) killGroup(meta.pid, "SIGKILL");
+	try {
+		writeFileSync(meta.exitPath, isAlive(meta.pid) ? "137" : "143", "utf8");
+	} catch {
+		// best effort — status will fall back to liveness
+	}
+	return { ok: true, text: `Stopped ${meta.id} (${truncate(meta.command, 70)})` };
+}
+
+/** Running tasks, newest first — the set "stop everything" acts on. */
+function runningMetas(): Meta[] {
+	return allMetas().filter((meta) => statusOf(meta).state === "running");
+}
+
 // ── Tool params ─────────────────────────────────────────────────────────
 
 const BgParams = Type.Object({
@@ -251,10 +276,15 @@ function fail(message: string, details: BgDetails = { action: "error" }) {
 	return result(`Error: ${message}`, { ...details, error: message });
 }
 
+/** Exact id, else a unique prefix — `1bff` is enough to name `1bff392c`. */
 function requireMeta(id: string | undefined): Meta | string {
 	if (!id) return "id required";
-	const meta = readMeta(id);
-	return meta ?? `no background task '${id}'`;
+	const exact = readMeta(id);
+	if (exact) return exact;
+	const matches = allMetas().filter((meta) => meta.id.startsWith(id));
+	if (matches.length === 0) return `no background task '${id}'`;
+	if (matches.length > 1) return `'${id}' is ambiguous: ${matches.map((meta) => meta.id).join(", ")}`;
+	return matches[0];
 }
 
 function listText(metas: Meta[]): string {
@@ -287,6 +317,7 @@ class BgPanel {
 	private theme: Theme;
 	private onClose: () => void;
 	private requestRender: () => void;
+	private message = "";
 
 	constructor(options: { theme: Theme; cursor: number; onClose: () => void; requestRender: () => void }) {
 		this.theme = options.theme;
@@ -303,6 +334,22 @@ class BgPanel {
 		const last = Math.max(0, orderedMetas(MAX_LIST).length - 1);
 		if (matchesKey(data, Key.up) || data === "k") this.cursor = Math.max(0, this.cursor - 1);
 		else if (matchesKey(data, Key.down) || data === "j") this.cursor = Math.min(last, this.cursor + 1);
+		else if (data === "x") void this.killSelected();
+		else if (data === "X") void this.killAll();
+		this.requestRender();
+	}
+
+	private async killSelected(): Promise<void> {
+		const meta = orderedMetas(MAX_LIST)[this.cursor];
+		if (!meta) return;
+		this.message = statusOf(meta).state === "running" ? (await stopTask(meta)).text : `${meta.id} is not running`;
+		this.requestRender();
+	}
+
+	private async killAll(): Promise<void> {
+		const running = runningMetas();
+		if (running.length === 0) this.message = "Nothing running";
+		else this.message = (await Promise.all(running.map((meta) => stopTask(meta)))).map((stop) => stop.text).join(" · ");
 		this.requestRender();
 	}
 
@@ -340,7 +387,8 @@ class BgPanel {
 			}
 		}
 
-		lines.push("", truncateToWidth(`  ${th.fg("dim", "↑↓ select · q close")}`, width), "");
+		lines.push("", truncateToWidth(`  ${th.fg("dim", "↑↓ select · x kill · X kill all · q close")}`, width), "");
+		if (this.message) lines.push(truncateToWidth(`  ${th.fg("accent", this.message)}`, width), "");
 		return lines;
 	}
 }
@@ -352,12 +400,12 @@ export default function bg(pi: ExtensionAPI) {
 		name: "bg",
 		label: "Background task",
 		description:
-			"Run and poll shell commands in the background. Use for anything slow: full test suites, builds, installs, dev servers. Actions: start (command, cwd) → id; list; output (id, lines); wait (id, timeout); stop (id); clean (drop finished tasks).\n\nTasks run detached in their own process group: they keep running after the turn ends and after pi exits, and are visible to subagents through the shared on-disk registry. Stopping is explicit (stop), so clean up servers you no longer need.",
+			"Run and poll shell commands in the background. Use for anything slow: full test suites, builds, installs, dev servers. Actions: start (command, cwd) → id; list; output (id, lines); wait (id, timeout); stop (id — a unique prefix is enough, omit id to stop every running task); clean (drop finished tasks).\n\nTasks run detached in their own process group: they keep running after the turn ends and after pi exits, and are visible to subagents through the shared on-disk registry. Stopping is explicit (stop), so clean up servers you no longer need.",
 		promptSnippet: "bg: background shell tasks — start/list/output/wait/stop for slow commands",
 		promptGuidelines: [
 			"Use bg instead of bash for commands likely to take more than ~60 seconds: installs, full test suites, large builds, watch modes, dev servers.",
 			"bg start returns at once: keep doing independent work and check progress with bg output. Use bg wait only when nothing else is left to do.",
-			"Always bg stop servers and watchers when done — they outlive the session by design.",
+			"Always bg stop servers and watchers when done — they outlive the session by design. `bg stop` with no id kills every running task at once.",
 			"bg task state is on disk under ~/.pi/agent/bg/, so a subagent can bg list/output the parent's tasks.",
 		],
 		parameters: BgParams,
@@ -456,26 +504,21 @@ export default function bg(pi: ExtensionAPI) {
 				}
 
 				case "stop": {
+					// No id stops everything that is running: the quick "kill my dev servers" path.
+					if (!params.id) {
+						const running = runningMetas();
+						if (running.length === 0) return fail("no running tasks to stop", { action: "stop" });
+						const stopped = await Promise.all(running.map((meta) => stopTask(meta)));
+						return result(stopped.map((s) => s.text).join("\n"), { action: "stop", state: "exited" });
+					}
 					const meta = requireMeta(params.id);
 					if (typeof meta === "string") return fail(meta, { action: "stop" });
 					const status = statusOf(meta);
 					if (status.state !== "running") return fail(`${meta.id} is not running (${describe(status)})`, { action: "stop" });
-					if (!ownsPid(meta)) {
-						return fail(`${meta.id}: pid ${meta.pid} no longer looks like this task; not killing it`, { action: "stop" });
-					}
 
-					killGroup(meta.pid, "SIGTERM");
-					const deadline = Date.now() + STOP_GRACE_MS;
-					while (isAlive(meta.pid) && Date.now() < deadline) await sleep(WAIT_POLL_MS);
-					if (isAlive(meta.pid)) killGroup(meta.pid, "SIGKILL");
-					// The wrapper dies before it can write its own exit code, so record one
-					// here; otherwise the task reads as "lost" forever.
-					try {
-						writeFileSync(meta.exitPath, isAlive(meta.pid) ? "137" : "143", "utf8");
-					} catch {
-						// best effort — status will fall back to liveness
-					}
-					return result(`Stopped ${meta.id} (${truncate(meta.command, 70)})`, { action: "stop", taskId: meta.id, state: "exited" });
+					const stop = await stopTask(meta);
+					if (!stop.ok) return fail(stop.text, { action: "stop" });
+					return result(stop.text, { action: "stop", taskId: meta.id, state: "exited" });
 				}
 
 				case "clean": {
@@ -512,7 +555,7 @@ export default function bg(pi: ExtensionAPI) {
 	});
 
 	pi.registerCommand("bg", {
-		description: "Background tasks: /bg opens a live panel, /bg <id> jumps to that task",
+		description: "Background tasks: /bg opens a live panel (x kill, X kill all), /bg <id> jumps to that task",
 		handler: async (args, ctx) => {
 			const id = args.trim().split(/\s+/)[0] ?? "";
 			const metas = orderedMetas(MAX_LIST);

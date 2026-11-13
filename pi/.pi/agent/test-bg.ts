@@ -244,6 +244,42 @@ ok("running task survives the 20 cap", text(r).includes(`${idOldRunning}  runnin
 ok("list stays capped", text(r).split("\n").length <= 21, String(text(r).split("\n").length));
 await run({ action: "stop", id: idOldRunning });
 
+// ── 17. stop by prefix, stop everything, panel x / X ──────────────
+r = await run({ action: "start", command: "sleep 300" });
+const idPrefix = d(r).taskId;
+r = await run({ action: "stop", id: idPrefix.slice(0, 4) });
+ok("stop accepts an id prefix", !d(r).error && text(r).includes(idPrefix), text(r));
+r = await run({ action: "output", id: idPrefix });
+ok("prefixed stop really killed it", d(r).state === "exited", JSON.stringify(d(r)));
+
+fake("ambig001", 1000);
+fake("ambig002", 1000);
+r = await run({ action: "stop", id: "ambig" });
+ok("ambiguous prefix names both ids", /ambiguous/.test(d(r).error ?? "") && d(r).error.includes("ambig001") && d(r).error.includes("ambig002"), JSON.stringify(d(r)));
+
+const allA = d(await run({ action: "start", command: "sleep 300" })).taskId;
+const allB = d(await run({ action: "start", command: "sleep 300" })).taskId;
+r = await run({ action: "stop" });
+ok("stop with no id stops every running task", !d(r).error && text(r).includes(allA) && text(r).includes(allB), text(r));
+r = await run({ action: "list" });
+ok("nothing running after stop-all", / 0 running/.test(text(r)), text(r).split("\n")[0]);
+r = await run({ action: "stop" });
+ok("stop-all errors when nothing runs", /no running tasks/.test(d(r).error ?? ""), JSON.stringify(d(r)));
+
+const idPanelKill = d(await run({ action: "start", command: "sleep 300" })).taskId;
+await cmd.handler("", tuiCtx);
+panel.handleInput("x");
+await new Promise((res) => setTimeout(res, 800));
+r = await run({ action: "output", id: idPanelKill });
+ok("panel x kills the selected task", d(r).state === "exited" && /Stopped/.test(panel.render(100).join("\n")), JSON.stringify(d(r)));
+
+const idPanelAll = d(await run({ action: "start", command: "sleep 300" })).taskId;
+await cmd.handler("", tuiCtx);
+panel.handleInput("X");
+await new Promise((res) => setTimeout(res, 800));
+r = await run({ action: "output", id: idPanelAll });
+ok("panel X kills every running task", d(r).state === "exited" && /Stopped/.test(panel.render(100).join("\n")), JSON.stringify(d(r)));
+
 rmSync(home, { recursive: true, force: true });
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
