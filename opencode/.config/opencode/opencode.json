@@ -27,6 +27,14 @@
       "type": "remote",
       "url": "https://mcp.resend.com/mcp",
       "enabled": true
+    },
+    "Neon": {
+      "type": "remote",
+      "url": "https://mcp.neon.tech/mcp",
+      "headers": {
+        "Authorization": "Bearer {env:NEON_API_KEY}"
+      },
+      "enabled": true
     }
   }
 }

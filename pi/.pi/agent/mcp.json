@@ -7,6 +7,18 @@
     "context7": {
       "url": "https://mcp.context7.com/mcp/oauth",
       "exposure": "direct"
+    },
+ "n8n": {
+      "url": "https://n8n.lubasiverse.com/mcp-server/http"
+    },
+    "polar" :{
+      "url" :"https://mcp.polar.sh/mcp/polar-mcp"
+    },
+    "Neon": {
+      "url": "https://mcp.neon.tech/mcp",
+      "headers": {
+        "Authorization": "Bearer ${NEON_API_KEY}"
+      }
     }
   }
 }
