@@ -36,6 +36,7 @@ fi
 _bash_path_prepend() { case ":$PATH:" in *":$1:"*) ;; *) export PATH="$1:$PATH" ;; esac; }
 _bash_path_prepend "$HOME/.local/bin"
 _bash_path_prepend "$HOME/.bun/bin"
+_bash_path_prepend "$HOME/go/bin"
 
 alias ls='ls --color=auto'
 alias grep='grep --color=auto'
@@ -57,3 +58,6 @@ if command -v yazi >/dev/null; then
 fi
 command -v zoxide >/dev/null && eval "$(zoxide init bash)"
 command -v fzf >/dev/null && eval "$(fzf --bash)" 2>/dev/null   # native widgets (C-t/C-r/M-c) + **<Tab> completion
+
+# Local secrets (API keys). Untracked; same file as zsh/.zshenv sources.
+[[ -r "$HOME/.config/secrets.env" ]] && . "$HOME/.config/secrets.env"
