@@ -238,7 +238,7 @@ export default function tasktracker(pi: ExtensionAPI) {
 			const msg = entry.message;
 			if (msg.role !== "toolResult" || msg.toolName !== "task") continue;
 			const details = msg.details as TaskDetails | undefined;
-			if (!details) continue;
+			if (!Array.isArray(details?.tasks)) continue;
 			// Clone: this array lives in the session history. Aliasing it would let
 			// later pushes/toggles rewrite the transcript (and every branch reader).
 			tasks = details.tasks.map((t) => ({ ...t }));
@@ -415,7 +415,7 @@ export default function tasktracker(pi: ExtensionAPI) {
 
 		renderResult(result, { expanded }, theme) {
 			const details = result.details as TaskDetails | undefined;
-			if (!details) {
+			if (!Array.isArray(details?.tasks)) {
 				const first = result.content[0];
 				return new Text(first?.type === "text" ? first.text : "", 0, 0);
 			}

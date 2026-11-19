@@ -1,6 +1,6 @@
 {
   "collapseChangelog": true,
-  "defaultModel": "deepseek-v4.1-flash",
+  "defaultModel": "hy4-flash-free",
   "defaultProvider": "opencode-go",
   "defaultThinkingLevel": "high",
   "enableInstallTelemetry": false,
@@ -19,6 +19,6 @@
     "anthropicExtraUsage": false
   },
   "extensionChangelogVersions": {
-    "{\"source\":\"npm:pi-web-access\",\"scope\":\"user\"}": "0.47.0"
+    "{\"source\":\"npm:pi-web-access\",\"scope\":\"user\"}": "0.48.0"
   }
 }
